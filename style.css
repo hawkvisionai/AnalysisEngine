@@ -196,3 +196,116 @@ body.brand-ready .app-shell{animation:brand-main-in .55s ease-out both}
   }
   .intro-eye-flash{display:none}
 }
+
+
+/* v3.0｜品牌轉場、12 小時播放規則、等待狀態與手機按鈕置中 */
+:root{
+  --brand-transition-duration: .58s;
+}
+
+.decision.waiting-state{
+  background:rgba(37,30,51,.28);
+  border-color:rgba(255,255,255,.16);
+  box-shadow:none;
+}
+.decision.waiting-state .decision-result-row{
+  justify-content:center;
+}
+.decision.waiting-state #decisionValue{
+  font-size:clamp(30px,4.2vw,54px);
+  color:rgba(255,255,255,.68);
+  text-align:center;
+}
+.decision.waiting-state .decision-percent{
+  display:none;
+}
+#confidenceValue.is-waiting,
+#accuracyValue.is-waiting{
+  font-size:clamp(20px,2.2vw,32px);
+  color:rgba(255,255,255,.64);
+  font-weight:700;
+  letter-spacing:.02em;
+}
+
+/* 中央 Logo 真正縮小並移動到 Header Logo 的位置 */
+.brand-intro.brand-transitioning{
+  background:rgba(0,0,0,.96);
+  transition:background .5s ease, opacity .5s ease, visibility .5s ease;
+}
+.brand-intro.brand-transitioning .intro-name,
+.brand-intro.brand-transitioning .intro-slogan{
+  animation:brand-copy-out .28s ease forwards;
+}
+.brand-intro.brand-transitioning .intro-logo-wrap{
+  position:fixed;
+  z-index:10001;
+  margin:0;
+  transition:
+    left var(--brand-transition-duration) cubic-bezier(.22,.8,.24,1),
+    top var(--brand-transition-duration) cubic-bezier(.22,.8,.24,1),
+    width var(--brand-transition-duration) cubic-bezier(.22,.8,.24,1),
+    height var(--brand-transition-duration) cubic-bezier(.22,.8,.24,1),
+    transform var(--brand-transition-duration) cubic-bezier(.22,.8,.24,1),
+    filter var(--brand-transition-duration) ease;
+}
+.brand-intro.brand-transitioning .intro-brand{
+  animation:none;
+  transform:none;
+}
+@keyframes brand-copy-out{
+  to{opacity:0;transform:translateY(-8px)}
+}
+body.brand-ready .brand-copy{
+  animation:header-brand-copy-in .42s .18s ease both;
+}
+@keyframes header-brand-copy-in{
+  from{opacity:0;transform:translateX(-8px)}
+  to{opacity:1;transform:translateX(0)}
+}
+
+/* 手機版莊閒和按鈕文字完全置中 */
+.result-btn,
+.outcome-btn,
+button[data-result],
+button[data-outcome]{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  line-height:1 !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+}
+@media(max-width:800px){
+  .result-btn,
+  .outcome-btn,
+  button[data-result],
+  button[data-outcome]{
+    min-height:64px;
+    font-size:clamp(24px,7vw,34px);
+  }
+}
+
+/* 12 小時內略過開場時，主畫面直接可見 */
+body.brand-skip-intro .app-shell{
+  opacity:1 !important;
+  transform:none !important;
+  animation:none !important;
+}
+body.brand-skip-intro .header-logo{
+  animation:header-logo-pulse .22s ease-out both;
+}
+@keyframes header-logo-pulse{
+  0%{filter:drop-shadow(0 0 0 rgba(245,197,66,0))}
+  55%{filter:drop-shadow(0 0 10px rgba(245,197,66,.75))}
+  100%{filter:drop-shadow(0 0 10px rgba(139,92,246,.22))}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .brand-intro.brand-transitioning .intro-logo-wrap,
+  body.brand-ready .brand-copy,
+  body.brand-skip-intro .header-logo{
+    transition:none !important;
+    animation:none !important;
+  }
+}

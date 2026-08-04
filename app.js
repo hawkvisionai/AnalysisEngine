@@ -1,22 +1,93 @@
 (() => {
   "use strict";
 
+  const BRAND_INTRO_STORAGE_KEY = "hawkvision_last_brand_intro";
+  const BRAND_INTRO_INTERVAL_MS = 12 * 60 * 60 * 1000;
+
+  function shouldPlayBrandIntro() {
+    try {
+      const lastPlayed = Number(localStorage.getItem(BRAND_INTRO_STORAGE_KEY) || 0);
+      return !lastPlayed || (Date.now() - lastPlayed) >= BRAND_INTRO_INTERVAL_MS;
+    } catch {
+      return true;
+    }
+  }
+
+  function rememberBrandIntroPlayed() {
+    try {
+      localStorage.setItem(BRAND_INTRO_STORAGE_KEY, String(Date.now()));
+    } catch {
+      // localStorage 不可用時，仍正常播放，不影響主功能。
+    }
+  }
+
+  function showMainImmediately() {
+    const intro = document.getElementById("brandIntro");
+    if (intro) intro.remove();
+
+    document.body.classList.remove("brand-intro-active");
+    document.body.classList.add("brand-skip-intro", "brand-ready");
+  }
+
   function finishBrandIntro() {
     const intro = document.getElementById("brandIntro");
-    if (!intro) {
+    const introLogoWrap = intro?.querySelector(".intro-logo-wrap");
+    const headerLogo = document.querySelector(".header-logo");
+
+    if (!intro || !introLogoWrap || !headerLogo) {
+      if (intro) intro.remove();
       document.body.classList.remove("brand-intro-active");
       document.body.classList.add("brand-ready");
+      rememberBrandIntroPlayed();
       return;
     }
-    intro.classList.add("is-leaving");
-    document.body.classList.remove("brand-intro-active");
-    document.body.classList.add("brand-ready");
-    setTimeout(() => intro.remove(), 520);
+
+    const startRect = introLogoWrap.getBoundingClientRect();
+    const targetRect = headerLogo.getBoundingClientRect();
+
+    intro.classList.add("brand-transitioning");
+
+    Object.assign(introLogoWrap.style, {
+      left: `${startRect.left}px`,
+      top: `${startRect.top}px`,
+      width: `${startRect.width}px`,
+      height: `${startRect.height}px`,
+      transform: "none"
+    });
+
+    // 先固定當前位置，再於下一幀移動到左上角 Header。
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        Object.assign(introLogoWrap.style, {
+          left: `${targetRect.left}px`,
+          top: `${targetRect.top}px`,
+          width: `${targetRect.width}px`,
+          height: `${targetRect.height}px`,
+          transform: "translateZ(0)",
+          filter: "drop-shadow(0 0 10px rgba(139,92,246,.22))"
+        });
+      });
+    });
+
+    setTimeout(() => {
+      intro.classList.add("is-leaving");
+      document.body.classList.remove("brand-intro-active");
+      document.body.classList.add("brand-ready");
+      rememberBrandIntroPlayed();
+
+      setTimeout(() => intro.remove(), 520);
+    }, 620);
   }
 
   window.addEventListener("load", () => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTimeout(finishBrandIntro, reduceMotion ? 120 : 2500);
+
+    if (!shouldPlayBrandIntro()) {
+      showMainImmediately();
+      return;
+    }
+
+    setTimeout(finishBrandIntro, reduceMotion ? 160 : 2500);
   });
 
   const cfg = window.HAWKVISION_CONFIG || {};
@@ -76,6 +147,7 @@
   }
 
   function showDecisionResult(outcome, percentText, flash = true) {
+    clearWaitingStyles();
     els.decision.textContent = outcome || "—";
     els.decisionPercent.textContent = percentText || "—";
     setDecisionTheme(outcome, flash);
@@ -85,6 +157,25 @@
     els.decision.textContent = "—";
     els.decisionPercent.textContent = "—";
     setDecisionTheme(null, false);
+  }
+
+  function showInitialWaitingState() {
+    els.decisionCard.className = "decision waiting-state";
+    els.decision.textContent = "AI 待命中";
+    els.decisionPercent.textContent = "";
+
+    els.confidence.textContent = "等待分析";
+    els.confidence.classList.add("is-waiting");
+
+    if (els.accuracy) {
+      els.accuracy.textContent = "尚無紀錄";
+      els.accuracy.classList.add("is-waiting");
+    }
+  }
+
+  function clearWaitingStyles() {
+    els.confidence.classList.remove("is-waiting");
+    if (els.accuracy) els.accuracy.classList.remove("is-waiting");
   }
 
   function saveSession() {
@@ -153,6 +244,7 @@
   }
 
   function setAnalyzing(isAnalyzing) {
+    if (isAnalyzing) clearWaitingStyles();
     state.isAnalyzing = isAnalyzing;
     els.analyzeBtn.disabled = isAnalyzing;
     document.querySelectorAll("[data-result]").forEach(button => {
@@ -328,8 +420,7 @@
   }
 
   function resetAnalysisDisplay() {
-    clearDecisionResult();
-    els.confidence.textContent = "—";
+    showInitialWaitingState();
     els.warning.classList.add("hidden");
   }
 
@@ -533,6 +624,10 @@
   testConnection();
 
   // 若會員在分析已啟動後誤按 F5，恢復牌靴並重新取得最新判定。
+  if (!restored || !state.analysisStarted) {
+    showInitialWaitingState();
+  }
+
   const restoredNonTieCount = state.rounds.filter(result => result !== "和").length;
   if (restored && state.analysisStarted && restoredNonTieCount >= Number(els.lookback.value)) {
     analyze(true);
