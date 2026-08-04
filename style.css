@@ -326,3 +326,92 @@ body.brand-ready .brand-copy{
   from{opacity:0;transform:translateX(-6px)}
   to{opacity:1;transform:translateX(0)}
 }
+
+
+/* v3.0 Preview 3｜手機結果卡與珠盤統計微調 */
+@media(max-width:800px){
+  /* 正確、錯誤、正確率：標題在上，數值置中於剩餘空間 */
+  .accuracy div{
+    min-height:108px;
+    padding:10px 7px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .accuracy div > span{
+    flex:0 0 auto;
+    width:100%;
+    text-align:center;
+  }
+  .accuracy div > strong{
+    flex:1 1 auto;
+    width:100%;
+    margin-top:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    line-height:1;
+  }
+
+  /* 正確率等待文字固定一行顯示 */
+  #accuracyRate{
+    white-space:nowrap;
+    word-break:keep-all;
+    font-size:18px;
+    letter-spacing:-.04em;
+  }
+
+  /* AI 待命中、等待分析於手機版完整置中 */
+  .decision.waiting-state #decisionValue{
+    font-size:clamp(28px,8.2vw,42px);
+    width:100%;
+    text-align:center;
+  }
+  #confidenceValue.is-waiting,
+  #confidenceValue{
+    text-align:center;
+  }
+
+  /* 珠盤路統計：標題靠左、數字靠右並垂直置中 */
+  .totals div{
+    min-height:52px;
+    padding:8px 9px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .totals div > span{
+    flex:0 1 auto;
+    text-align:left;
+    white-space:nowrap;
+  }
+  .totals div > strong{
+    flex:0 0 auto;
+    min-width:1.4em;
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    text-align:right;
+    line-height:1;
+  }
+}
+
+/* 品牌飛行時使用主畫面的最終座標，確保最後精準落在 Header Logo */
+body.brand-target-layout .app-shell{
+  transform:none !important;
+  animation:none !important;
+}
+body.brand-target-layout .header-logo{
+  visibility:hidden;
+}
+body.brand-target-layout.brand-ready .app-shell{
+  opacity:1;
+  transform:none !important;
+  animation:brand-main-opacity-in .34s ease-out both !important;
+}
+@keyframes brand-main-opacity-in{
+  from{opacity:0}
+  to{opacity:1}
+}

@@ -51,46 +51,65 @@
       transform: "none"
     });
 
-    const deltaX = targetRect.left - startRect.left;
-    const deltaY = targetRect.top - startRect.top;
-    const targetScaleX = targetRect.width / startRect.width;
-    const targetScaleY = targetRect.height / startRect.height;
+    // 先把主畫面固定在最終版面座標，但維持透明，
+    // 這樣手機與桌機取得的 Header Logo 終點都會完全正確。
+    document.body.classList.add("brand-target-layout");
+    const finalTargetRect = headerLogo.getBoundingClientRect();
 
-    // 使用中途控制點形成自然弧線，而不是直線飛到左上角。
-    const controlX = deltaX * 0.56;
-    const controlY = deltaY * 0.36 - 34;
+    const arcLift = Math.max(22, Math.min(58, startRect.height * 0.12));
+    const midLeft = startRect.left + (finalTargetRect.left - startRect.left) * 0.58;
+    const midTop = startRect.top + (finalTargetRect.top - startRect.top) * 0.42 - arcLift;
+    const midWidth = startRect.width + (finalTargetRect.width - startRect.width) * 0.66;
+    const midHeight = startRect.height + (finalTargetRect.height - startRect.height) * 0.66;
 
-    introLogoWrap.animate(
+    const flight = introLogoWrap.animate(
       [
         {
-          transform: "translate3d(0,0,0) scale(1)",
+          left: `${startRect.left}px`,
+          top: `${startRect.top}px`,
+          width: `${startRect.width}px`,
+          height: `${startRect.height}px`,
+          transform: "translate3d(0,0,0)",
           filter: "drop-shadow(0 0 22px rgba(139,92,246,.34))"
         },
         {
-          transform: `translate3d(${controlX}px,${controlY}px,0) scale(${Math.max(targetScaleX, targetScaleY) * 1.65})`,
-          offset: 0.56,
+          left: `${midLeft}px`,
+          top: `${midTop}px`,
+          width: `${midWidth}px`,
+          height: `${midHeight}px`,
+          transform: "translate3d(0,0,0)",
+          offset: 0.58,
           filter: "drop-shadow(0 0 18px rgba(139,92,246,.28))"
         },
         {
-          transform: `translate3d(${deltaX}px,${deltaY}px,0) scale(${targetScaleX},${targetScaleY})`,
+          left: `${finalTargetRect.left}px`,
+          top: `${finalTargetRect.top}px`,
+          width: `${finalTargetRect.width}px`,
+          height: `${finalTargetRect.height}px`,
+          transform: "translate3d(0,0,0)",
           filter: "drop-shadow(0 0 10px rgba(139,92,246,.22))"
         }
       ],
       {
-        duration: 560,
+        duration: 580,
         easing: "cubic-bezier(.22,.8,.24,1)",
         fill: "forwards"
       }
     );
 
+    // Logo 飛行中讓主畫面淡入，但隱藏 Header 原本的 Logo，避免重疊。
     setTimeout(() => {
+      document.body.classList.add("brand-ready");
+    }, 250);
+
+    flight.addEventListener("finish", () => {
       intro.classList.add("is-leaving");
-      document.body.classList.remove("brand-intro-active");
+      document.body.classList.remove("brand-intro-active", "brand-target-layout");
       document.body.classList.add("brand-ready");
       rememberBrandIntroPlayed();
 
-      setTimeout(() => intro.remove(), 520);
-    }, 580);
+      setTimeout(() => intro.remove(), 500);
+    }, { once: true });
   }
 
   window.addEventListener("load", () => {
