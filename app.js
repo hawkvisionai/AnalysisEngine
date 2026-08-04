@@ -163,7 +163,7 @@
       throw new Error("尚未填入 Supabase 公開金鑰");
     }
 
-    const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes`, {
+    const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes_basic`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -188,7 +188,7 @@
     }
 
     try {
-      const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes`, {
+      const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes_basic`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -317,39 +317,32 @@
 
   async function analyze(auto = false) {
     const length = Number(els.lookback.value);
-    if (state.rounds.length < length) {
-      if (!auto) showToast(`至少需要輸入 ${length} 局`);
+
+    // A 基礎分析：會員目前牌靴的搜尋序列完全忽略和局。
+    // 「最近 N 局」在分析時代表最近 N 個莊／閒結果。
+    // 和局仍完整保留在珠盤路與牌靴統計中。
+    const nonTieRounds = state.rounds.filter(result => result !== "和");
+
+    if (nonTieRounds.length < length) {
+      if (!auto) showToast(`至少需要輸入 ${length} 個莊／閒結果`);
       return;
     }
 
-    const originalSequence = state.rounds.slice(-length);
+    const searchSequence = nonTieRounds.slice(-length);
     setAnalyzing(true);
 
     try {
-      let searchSequence = [...originalSequence];
-      let counts = { "莊": 0, "閒": 0, "和": 0 };
+      const rows = await callSearchRpc(searchSequence);
+      const counts = { "莊": 0, "閒": 0 };
       let total = 0;
 
-      // 先用完整的最近局數搜尋。若找不到歷史結果，
-      // 從「最新的一個和局」開始逐次省略，再重新搜尋。
-      // 省略只影響本次搜尋，不會刪除珠盤路中的和局紀錄。
-      while (searchSequence.length > 0) {
-        const rows = await callSearchRpc(searchSequence);
-        counts = { "莊": 0, "閒": 0, "和": 0 };
-
-        for (const row of rows) {
-          if (row.outcome in counts) {
-            counts[row.outcome] = Number(row.match_count || 0);
-          }
+      for (const row of rows) {
+        if (row.outcome in counts) {
+          counts[row.outcome] = Number(row.match_count || 0);
         }
-
-        total = counts["莊"] + counts["閒"] + counts["和"];
-        if (total > 0) break;
-
-        const latestTieIndex = searchSequence.lastIndexOf("和");
-        if (latestTieIndex === -1) break;
-        searchSequence.splice(latestTieIndex, 1);
       }
+
+      total = counts["莊"] + counts["閒"];
 
       if (!total) {
         clearDecisionResult();
@@ -457,7 +450,8 @@
     renderAll();
     saveSession();
 
-    if (state.analysisStarted && state.rounds.length >= Number(els.lookback.value)) {
+    const nonTieCount = state.rounds.filter(result => result !== "和").length;
+    if (state.analysisStarted && nonTieCount >= Number(els.lookback.value)) {
       analyze(true);
     } else {
       resetAnalysisDisplay();
@@ -501,7 +495,8 @@
   testConnection();
 
   // 若會員在分析已啟動後誤按 F5，恢復牌靴並重新取得最新判定。
-  if (restored && state.analysisStarted && state.rounds.length >= Number(els.lookback.value)) {
+  const restoredNonTieCount = state.rounds.filter(result => result !== "和").length;
+  if (restored && state.analysisStarted && restoredNonTieCount >= Number(els.lookback.value)) {
     analyze(true);
   }
 })();
