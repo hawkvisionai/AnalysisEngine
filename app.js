@@ -1,6 +1,24 @@
 (() => {
   "use strict";
 
+  function finishBrandIntro() {
+    const intro = document.getElementById("brandIntro");
+    if (!intro) {
+      document.body.classList.remove("brand-intro-active");
+      document.body.classList.add("brand-ready");
+      return;
+    }
+    intro.classList.add("is-leaving");
+    document.body.classList.remove("brand-intro-active");
+    document.body.classList.add("brand-ready");
+    setTimeout(() => intro.remove(), 520);
+  }
+
+  window.addEventListener("load", () => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTimeout(finishBrandIntro, reduceMotion ? 120 : 1050);
+  });
+
   const cfg = window.HAWKVISION_CONFIG || {};
   const state = {
     rounds: [],

@@ -116,3 +116,83 @@ select{background:#3a334d}.primary{align-self:end;background:#2746e6;font-weight
   .decision-result-row strong{font-size:58px}
   .decision-percent{font-size:27px}
 }
+
+
+/* v2.9 Brand Intro + HawkVision visual identity */
+body.brand-intro-active{overflow:hidden}
+.brand-intro{
+  position:fixed;inset:0;z-index:9999;display:grid;place-items:center;
+  background:#000;opacity:1;visibility:visible;
+  transition:opacity .42s ease,visibility .42s ease;
+}
+.brand-intro.is-leaving{opacity:0;visibility:hidden}
+.intro-brand{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  transform:translateY(-1vh);animation:intro-brand-in .48s ease-out both;
+}
+.intro-logo-wrap{position:relative;width:min(50vw,360px);aspect-ratio:1}
+.intro-logo{
+  width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 0 22px rgba(139,92,246,.34));
+}
+.intro-eye-flash{
+  position:absolute;left:50.6%;top:55.2%;width:7.5%;aspect-ratio:1;
+  border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,#fff7c2 0 15%,#f5c542 28%,rgba(245,197,66,.5) 48%,transparent 72%);
+  opacity:0;filter:blur(.2px);
+  animation:hawk-eye-blink 1s ease-in-out both;
+  box-shadow:0 0 10px #f5c542,0 0 24px rgba(245,197,66,.85),0 0 42px rgba(139,92,246,.35);
+}
+.intro-name{
+  margin-top:-12px;color:#e5e7eb;font-size:clamp(34px,5.3vw,68px);
+  line-height:1;font-weight:900;letter-spacing:-.04em;font-style:italic;
+}
+.intro-name span{color:#8b5cf6}
+.intro-slogan{
+  margin-top:16px;color:#f5c542;font-size:clamp(11px,1.55vw,19px);
+  font-weight:700;letter-spacing:.18em;
+}
+@keyframes intro-brand-in{
+  from{opacity:0;transform:translateY(12px) scale(.97)}
+  to{opacity:1;transform:translateY(-1vh) scale(1)}
+}
+@keyframes hawk-eye-blink{
+  0%,14%{opacity:0;transform:translate(-50%,-50%) scale(.6)}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(1.22)}
+  29%{opacity:.08}
+  37%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  47%{opacity:.12}
+  58%{opacity:.9}
+  72%,100%{opacity:0}
+}
+.app-shell{opacity:0;transform:translateY(8px)}
+body.brand-ready .app-shell{animation:brand-main-in .55s ease-out both}
+@keyframes brand-main-in{to{opacity:1;transform:translateY(0)}}
+.brand-lockup{display:flex;align-items:center;gap:13px}
+.header-logo{
+  width:66px;height:66px;object-fit:contain;flex:0 0 auto;
+  filter:drop-shadow(0 0 10px rgba(139,92,246,.22));
+}
+.brand-copy h1{
+  margin:0;font-size:30px;line-height:1;color:#e5e7eb;
+  font-weight:900;letter-spacing:-.035em;
+}
+.brand-copy h1 span{color:#8b5cf6}
+.brand-copy p{
+  margin:7px 0 0;color:#f5c542;font-size:10px;letter-spacing:.13em;
+  font-weight:750;white-space:nowrap;
+}
+.logo-placeholder{display:none!important}
+@media(max-width:800px){
+  .intro-logo-wrap{width:min(68vw,300px)}
+  .intro-slogan{letter-spacing:.12em}
+  .header-logo{width:48px;height:48px}
+  .brand-copy h1{font-size:24px}
+  .brand-copy p{font-size:7.5px;letter-spacing:.08em}
+}
+@media(prefers-reduced-motion:reduce){
+  .intro-brand,.intro-eye-flash,.brand-intro,.app-shell{
+    animation:none!important;transition:none!important
+  }
+  .intro-eye-flash{display:none}
+}
