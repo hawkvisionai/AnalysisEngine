@@ -210,20 +210,35 @@
       return;
     }
 
-    const sequence = state.rounds.slice(-length);
+    const originalSequence = state.rounds.slice(-length);
     els.analyzeBtn.disabled = true;
 
     try {
-      const rows = await callSearchRpc(sequence);
-      const counts = { "莊": 0, "閒": 0, "和": 0 };
+      let searchSequence = [...originalSequence];
+      let counts = { "莊": 0, "閒": 0, "和": 0 };
+      let total = 0;
 
-      for (const row of rows) {
-        if (row.outcome in counts) {
-          counts[row.outcome] = Number(row.match_count || 0);
+      // 先用完整的最近局數搜尋。若找不到歷史結果，
+      // 從「最新的一個和局」開始逐次省略，再重新搜尋。
+      // 省略只影響本次搜尋，不會刪除珠盤路中的和局紀錄。
+      while (searchSequence.length > 0) {
+        const rows = await callSearchRpc(searchSequence);
+        counts = { "莊": 0, "閒": 0, "和": 0 };
+
+        for (const row of rows) {
+          if (row.outcome in counts) {
+            counts[row.outcome] = Number(row.match_count || 0);
+          }
         }
+
+        total = counts["莊"] + counts["閒"] + counts["和"];
+        if (total > 0) break;
+
+        const latestTieIndex = searchSequence.lastIndexOf("和");
+        if (latestTieIndex === -1) break;
+        searchSequence.splice(latestTieIndex, 1);
       }
 
-      const total = counts["莊"] + counts["閒"] + counts["和"];
       if (!total) {
         els.decision.textContent = "—";
         els.confidence.textContent = "—";
