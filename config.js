@@ -17,5 +17,15 @@ window.HAWKVISION_CONFIG = {
 
   // 會員端信心度最低顯示 30%，最高顯示 90%。
   MIN_CONFIDENCE_PERCENT: 30,
-  MAX_CONFIDENCE_PERCENT: 90
+  MAX_CONFIDENCE_PERCENT: 90,
+
+  // v2.8 信心引擎權重。
+  // 左側「本次判定 %」不受這些權重影響，只顯示歷史符合率。
+  CONFIDENCE_HISTORY_WEIGHT: 0.40,
+  CONFIDENCE_SAMPLE_WEIGHT: 0.40,
+  CONFIDENCE_CONSISTENCY_WEIGHT: 0.20,
+
+  // 資料充足度的平滑尺度；數字越大，信心度隨資料量上升得越慢。
+  // 會員端不會看到歷史樣本數。
+  CONFIDENCE_SAMPLE_SCALE: 50
 };

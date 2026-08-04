@@ -356,25 +356,45 @@
 
       const outcome = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 
-      // 最終信心度：
-      // 1. 先計算歷史結果中最高比例。
-      // 2. 內部依資料充足程度向下調整，但不向會員顯示樣本數。
-      // 3. 會員端顯示範圍固定為 30%～90%。
-      const rawConfidence = (counts[outcome] / total) * 100;
-      const minMatches = Number(cfg.MIN_MATCHES || 10);
-      const sampleFactor = Math.min(1, total / minMatches);
+      // 歷史符合率：
+      // 只表示「相同歷史序列中，下一個非和局結果為本次判定的比例」。
+      // 它與右側信心度是兩個不同指標。
+      const historicalRate = Math.round((counts[outcome] / total) * 100);
+
+      // 信心度 v2.8：
+      // 40% 歷史符合率 + 40% 資料充足度 + 20% 分析一致性。
+      //
+      // 資料充足度採平滑飽和曲線，不使用硬切門檻：
+      // total 越多，分數逐步接近 100，但不會突然跳升。
+      //
+      // 分析一致性以莊閒差距衡量：
+      // 50:50 時為 0，100:0 時為 100。
+      const sampleScale = Math.max(1, Number(cfg.CONFIDENCE_SAMPLE_SCALE || 50));
+      const sampleSufficiency = 100 * (1 - Math.exp(-total / sampleScale));
+      const consistency = Math.abs(counts["莊"] - counts["閒"]) / total * 100;
+
+      const historicalWeight = Number(cfg.CONFIDENCE_HISTORY_WEIGHT || 0.40);
+      const sampleWeight = Number(cfg.CONFIDENCE_SAMPLE_WEIGHT || 0.40);
+      const consistencyWeight = Number(cfg.CONFIDENCE_CONSISTENCY_WEIGHT || 0.20);
+
+      const rawConfidence =
+        historicalWeight * historicalRate +
+        sampleWeight * sampleSufficiency +
+        consistencyWeight * consistency;
+
       const minConfidence = Number(cfg.MIN_CONFIDENCE_PERCENT || 30);
       const maxConfidence = Number(cfg.MAX_CONFIDENCE_PERCENT || 90);
-      const adjustedConfidence = Math.round(rawConfidence * sampleFactor);
       const confidence = Math.max(
         minConfidence,
-        Math.min(maxConfidence, adjustedConfidence)
+        Math.min(maxConfidence, Math.round(rawConfidence))
       );
+
       // 低於 40% 才顯示警告；40% 以上不顯示。
       const lowConfidence =
         confidence < Number(cfg.LOW_CONFIDENCE_PERCENT || 40);
 
-      showDecisionResult(outcome, `${confidence}%`, true);
+      // 左側：歷史符合率。右側：HawkVision 綜合信心度。
+      showDecisionResult(outcome, `${historicalRate}%`, true);
       els.confidence.textContent = `${confidence}%`;
       els.warning.classList.toggle("hidden", !lowConfidence);
       state.pendingPrediction = outcome;
