@@ -16,7 +16,7 @@
 
   window.addEventListener("load", () => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTimeout(finishBrandIntro, reduceMotion ? 120 : 1050);
+    setTimeout(finishBrandIntro, reduceMotion ? 120 : 2500);
   });
 
   const cfg = window.HAWKVISION_CONFIG || {};

@@ -1,14 +1,10 @@
-# HawkVision Analysis v2.9｜品牌 Logo 與全站開場
+# HawkVision Analysis v2.10｜Logo 顯示修正
 
 GitHub Pages 覆蓋更新版。
 
-新增：
-- 黑底品牌開場。
-- 中央 HawkVision 融合版 Logo。
-- 鷹眼短促閃爍與光暈。
-- 約 1 秒後開場淡出、主畫面淡入。
-- Logo 回到左上角品牌專屬位置。
-- 左上角固定顯示 HawkVision 與 `SEE EVERY MOVE. STAY AHEAD.`。
-- HawkVision Favicon 與手機主畫面圖示。
-- 支援「減少動態效果」設定。
-- 不影響背景資料載入、Supabase 連線與既有 v2.8 分析功能。
+本版修改：
+- 移除網站 Logo 下方殘留的小點。
+- 開場品牌動畫顯示時間延長至 2.5 秒。
+- 鷹眼閃爍動畫同步延長。
+- Header、開場、Favicon、手機圖示全部使用修正後 Logo。
+- 其餘 v2.9 與 v2.8 功能維持不變。
