@@ -1,6 +1,8 @@
-# HawkVision Analysis v2.1 Web Beta
+# HawkVision Analysis v2.3 更新說明
 
-GitHub Pages deployment package.
-
-Upload all files in this folder to the root of a GitHub repository, then enable:
-Settings → Pages → Deploy from a branch → main / root.
+- 目前連勝或連敗會隨每局結果即時增加。
+- 新增固定顯示「最高連勝」與「最高連敗」。
+- 最高連勝與最高連敗依本牌靴內全部已判定結果統計，最高 66。
+- 和局不影響目前連勝／連敗，也不影響最高紀錄。
+- 撤銷上一局時，三項連勝連敗統計同步重新計算。
+- 開始新牌靴時，三項統計全部歸零。

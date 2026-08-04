@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#151321">
-  <title>HawkVision Analysis v2.1</title>
+  <title>HawkVision Analysis v2.3</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -71,7 +71,6 @@
             <span class="eyebrow">RESULT</span>
             <h2>下一局分析結果</h2>
           </div>
-          <span id="analysisStatus" class="status">尚未分析</span>
         </div>
 
         <div class="decision-block">
@@ -82,10 +81,24 @@
           <div class="confidence">
             <span>信心度</span>
             <strong id="confidenceValue">—</strong>
+            <div id="warning" class="confidence-warning hidden">信心度過低，不建議下注</div>
           </div>
         </div>
 
-        <div id="warning" class="warning hidden">信心度過低，不建議下注</div>
+        <div class="streak-grid" aria-label="連勝連敗統計">
+          <div id="streakStatus" class="streak-status neutral">
+            <span>目前狀態</span>
+            <strong>尚無紀錄</strong>
+          </div>
+          <div class="streak-stat best-win">
+            <span>最高連勝</span>
+            <strong id="maxWinStreak">0</strong>
+          </div>
+          <div class="streak-stat best-loss">
+            <span>最高連敗</span>
+            <strong id="maxLossStreak">0</strong>
+          </div>
+        </div>
 
         <div class="accuracy">
           <div><span>正確</span><strong id="correctCount">0</strong></div>
