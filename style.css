@@ -431,3 +431,9 @@ body.brand-target-layout.brand-ready .app-shell{
 body.brand-target-layout .header-logo{
   visibility:hidden;
 }
+
+
+/* v3.0 Preview 6｜固定捲軸預留空間，避免桌機轉場終點橫向偏移 */
+html{
+  scrollbar-gutter:stable;
+}

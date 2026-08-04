@@ -51,11 +51,16 @@
       transform: "none"
     });
 
-    // 先讓主畫面採用最終響應式版面，取得 Header Logo 的真正座標。
+    // 電腦版關閉開場時會重新出現垂直捲軸，頁面寬度因此改變。
+    // 先恢復最終捲軸狀態，再量測 Header Logo，避免終點差約一個捲軸寬度。
+    document.body.classList.remove("brand-intro-active");
     document.body.classList.add("brand-target-layout");
-    const finalTargetRect = headerLogo.getBoundingClientRect();
-    const introLogo = introLogoWrap.querySelector(".intro-logo");
-    const introLogoRect = introLogo.getBoundingClientRect();
+
+    // 等待瀏覽器完成最終版面重排後再取得座標。
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const finalTargetRect = headerLogo.getBoundingClientRect();
+      const introLogo = introLogoWrap.querySelector(".intro-logo");
+      const introLogoRect = introLogo.getBoundingClientRect();
 
     // 建立與 Header Logo 完全相同的飛行副本。
     const flyingLogo = document.createElement("img");
@@ -113,18 +118,19 @@
       document.body.classList.add("brand-ready");
     }, 250);
 
-    flight.addEventListener("finish", () => {
-      // 完全重疊後才顯示真正 Header Logo，避免終點偏移。
-      headerLogo.style.visibility = "visible";
-      flyingLogo.remove();
+      flight.addEventListener("finish", () => {
+        // 完全重疊後才顯示真正 Header Logo，避免終點偏移。
+        headerLogo.style.visibility = "visible";
+        flyingLogo.remove();
 
-      intro.classList.add("is-leaving");
-      document.body.classList.remove("brand-intro-active", "brand-target-layout");
-      document.body.classList.add("brand-ready");
-      rememberBrandIntroPlayed();
+        intro.classList.add("is-leaving");
+        document.body.classList.remove("brand-target-layout");
+        document.body.classList.add("brand-ready");
+        rememberBrandIntroPlayed();
 
-      setTimeout(() => intro.remove(), 500);
-    }, { once: true });
+        setTimeout(() => intro.remove(), 500);
+      }, { once: true });
+    }));
   }
 
   window.addEventListener("load", () => {
