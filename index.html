@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#151321">
+  <title>HawkVision Analysis v2.1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="brand-bar">
+      <div class="brand-lockup">
+        <div class="logo-placeholder">HV</div>
+        <div>
+          <h1>HawkVision</h1>
+          <p>Analysis Engine</p>
+        </div>
+      </div>
+      <div id="dbStatus" class="db-status waiting">資料庫尚未連線</div>
+    </header>
+
+    <section class="top-grid">
+      <article class="card control-card">
+        <div class="section-title">
+          <div>
+            <span class="eyebrow">INPUT</span>
+            <h2>輸入目前牌局</h2>
+          </div>
+          <div class="mode-switch">
+            <button class="mode active" type="button">A 基礎分析</button>
+            <button id="advancedMode" class="mode" type="button">B 完整牌局</button>
+          </div>
+        </div>
+
+        <div class="result-buttons">
+          <button class="result banker" data-result="莊" type="button">莊</button>
+          <button class="result player" data-result="閒" type="button">閒</button>
+          <button class="result tie" data-result="和" type="button">和</button>
+        </div>
+
+        <div class="action-grid">
+          <label class="field">
+            <span>最近分析局數</span>
+            <select id="lookback">
+              <option value="3">最近 3 局</option>
+              <option value="4">最近 4 局</option>
+              <option value="5">最近 5 局</option>
+              <option value="6">最近 6 局</option>
+              <option value="7">最近 7 局</option>
+              <option value="8" selected>最近 8 局</option>
+              <option value="9">最近 9 局</option>
+              <option value="10">最近 10 局</option>
+              <option value="11">最近 11 局</option>
+              <option value="12">最近 12 局</option>
+            </select>
+          </label>
+          <button id="analyzeBtn" class="primary" type="button">分析下一局</button>
+        </div>
+
+        <div class="tool-row">
+          <button id="undoBtn" class="secondary" type="button">撤銷上一局</button>
+          <button id="newShoeBtn" class="danger" type="button">開始新牌靴</button>
+          <div class="round-count">已輸入 <strong id="roundCount">0</strong> 局</div>
+        </div>
+      </article>
+
+      <article class="card result-card">
+        <div class="section-title compact">
+          <div>
+            <span class="eyebrow">RESULT</span>
+            <h2>下一局分析結果</h2>
+          </div>
+          <span id="analysisStatus" class="status">尚未分析</span>
+        </div>
+
+        <div class="decision-block">
+          <div class="decision">
+            <span>本次判定</span>
+            <strong id="decisionValue">—</strong>
+          </div>
+          <div class="confidence">
+            <span>信心度</span>
+            <strong id="confidenceValue">—</strong>
+          </div>
+        </div>
+
+        <div id="warning" class="warning hidden">信心度過低，不建議下注</div>
+
+        <div class="accuracy">
+          <div><span>正確</span><strong id="correctCount">0</strong></div>
+          <div><span>錯誤</span><strong id="wrongCount">0</strong></div>
+          <div><span>正確率</span><strong id="accuracyRate">—</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card bead-card">
+      <div class="bead-header">
+        <div>
+          <span class="eyebrow">CURRENT SHOE</span>
+          <h2>珠盤路</h2>
+        </div>
+        <div class="totals">
+          <div><span>莊</span><strong id="bankerTotal">0</strong></div>
+          <div><span>閒</span><strong id="playerTotal">0</strong></div>
+          <div><span>和</span><strong id="tieTotal">0</strong></div>
+          <div><span>總局數</span><strong id="totalRounds">0</strong></div>
+        </div>
+      </div>
+
+      <div id="beadGrid" class="bead-grid" aria-label="66 格珠盤路"></div>
+    </section>
+  </main>
+
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3>開始新牌靴？</h3>
+      <p>目前牌局、珠盤路、分析結果與正確率都會清空。</p>
+      <div class="modal-actions">
+        <button id="cancelNewShoe" class="secondary" type="button">取消</button>
+        <button id="confirmNewShoe" class="danger" type="button">開始新牌靴</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
