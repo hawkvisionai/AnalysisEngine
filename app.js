@@ -51,25 +51,39 @@
       transform: "none"
     });
 
-    // 先把主畫面固定在最終版面座標，但維持透明，
-    // 這樣手機與桌機取得的 Header Logo 終點都會完全正確。
+    // 先讓主畫面採用最終響應式版面，取得 Header Logo 的真正座標。
     document.body.classList.add("brand-target-layout");
     const finalTargetRect = headerLogo.getBoundingClientRect();
+    const introLogo = introLogoWrap.querySelector(".intro-logo");
+    const introLogoRect = introLogo.getBoundingClientRect();
 
-    const arcLift = Math.max(22, Math.min(58, startRect.height * 0.12));
-    const midLeft = startRect.left + (finalTargetRect.left - startRect.left) * 0.58;
-    const midTop = startRect.top + (finalTargetRect.top - startRect.top) * 0.42 - arcLift;
-    const midWidth = startRect.width + (finalTargetRect.width - startRect.width) * 0.66;
-    const midHeight = startRect.height + (finalTargetRect.height - startRect.height) * 0.66;
+    // 建立與 Header Logo 完全相同的飛行副本。
+    const flyingLogo = document.createElement("img");
+    flyingLogo.src = headerLogo.src;
+    flyingLogo.alt = "";
+    flyingLogo.className = "brand-flying-logo";
+    Object.assign(flyingLogo.style, {
+      left: `${introLogoRect.left}px`,
+      top: `${introLogoRect.top}px`,
+      width: `${introLogoRect.width}px`,
+      height: `${introLogoRect.height}px`
+    });
+    document.body.appendChild(flyingLogo);
+    introLogoWrap.style.opacity = "0";
 
-    const flight = introLogoWrap.animate(
+    const arcLift = Math.max(22, Math.min(58, introLogoRect.height * 0.12));
+    const midLeft = introLogoRect.left + (finalTargetRect.left - introLogoRect.left) * 0.58;
+    const midTop = introLogoRect.top + (finalTargetRect.top - introLogoRect.top) * 0.42 - arcLift;
+    const midWidth = introLogoRect.width + (finalTargetRect.width - introLogoRect.width) * 0.66;
+    const midHeight = introLogoRect.height + (finalTargetRect.height - introLogoRect.height) * 0.66;
+
+    const flight = flyingLogo.animate(
       [
         {
-          left: `${startRect.left}px`,
-          top: `${startRect.top}px`,
-          width: `${startRect.width}px`,
-          height: `${startRect.height}px`,
-          transform: "translate3d(0,0,0)",
+          left: `${introLogoRect.left}px`,
+          top: `${introLogoRect.top}px`,
+          width: `${introLogoRect.width}px`,
+          height: `${introLogoRect.height}px`,
           filter: "drop-shadow(0 0 22px rgba(139,92,246,.34))"
         },
         {
@@ -77,7 +91,6 @@
           top: `${midTop}px`,
           width: `${midWidth}px`,
           height: `${midHeight}px`,
-          transform: "translate3d(0,0,0)",
           offset: 0.58,
           filter: "drop-shadow(0 0 18px rgba(139,92,246,.28))"
         },
@@ -86,7 +99,6 @@
           top: `${finalTargetRect.top}px`,
           width: `${finalTargetRect.width}px`,
           height: `${finalTargetRect.height}px`,
-          transform: "translate3d(0,0,0)",
           filter: "drop-shadow(0 0 10px rgba(139,92,246,.22))"
         }
       ],
@@ -97,12 +109,15 @@
       }
     );
 
-    // Logo 飛行中讓主畫面淡入，但隱藏 Header 原本的 Logo，避免重疊。
     setTimeout(() => {
       document.body.classList.add("brand-ready");
     }, 250);
 
     flight.addEventListener("finish", () => {
+      // 完全重疊後才顯示真正 Header Logo，避免終點偏移。
+      headerLogo.style.visibility = "visible";
+      flyingLogo.remove();
+
       intro.classList.add("is-leaving");
       document.body.classList.remove("brand-intro-active", "brand-target-layout");
       document.body.classList.add("brand-ready");

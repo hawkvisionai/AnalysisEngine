@@ -415,3 +415,19 @@ body.brand-target-layout.brand-ready .app-shell{
   from{opacity:0}
   to{opacity:1}
 }
+
+
+/* v3.0 Preview 5｜以實際 Header Logo 圖像方框精準落點 */
+.brand-flying-logo{
+  position:fixed;
+  z-index:10002;
+  display:block;
+  object-fit:contain;
+  pointer-events:none;
+  transform:none;
+  margin:0;
+  padding:0;
+}
+body.brand-target-layout .header-logo{
+  visibility:hidden;
+}
