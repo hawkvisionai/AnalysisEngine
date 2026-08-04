@@ -437,3 +437,40 @@ body.brand-target-layout .header-logo{
 html{
   scrollbar-gutter:stable;
 }
+
+
+/* v3.0 Preview 7｜手機輸入區標題與模式按鈕單行顯示 */
+@media(max-width:800px){
+  .section-title h2{
+    white-space:nowrap;
+    word-break:keep-all;
+    font-size:clamp(24px,6.2vw,34px);
+    line-height:1.15;
+  }
+
+  .mode-switch{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    min-width:0;
+  }
+
+  .mode-switch .mode{
+    min-width:0;
+    white-space:nowrap;
+    word-break:keep-all;
+    overflow:hidden;
+    text-overflow:clip;
+    font-size:clamp(16px,4.7vw,24px);
+    line-height:1;
+    padding:0 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+
+  .section-title > div:first-child{
+    min-width:0;
+  }
+}
