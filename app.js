@@ -5,12 +5,8 @@
   const BRAND_INTRO_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
   function shouldPlayBrandIntro() {
-    try {
-      const lastPlayed = Number(localStorage.getItem(BRAND_INTRO_STORAGE_KEY) || 0);
-      return !lastPlayed || (Date.now() - lastPlayed) >= BRAND_INTRO_INTERVAL_MS;
-    } catch {
-      return true;
-    }
+    // Preview 2：開發測試期間每次進入都播放品牌轉場。
+    return true;
   }
 
   function rememberBrandIntroPlayed() {
@@ -55,19 +51,37 @@
       transform: "none"
     });
 
-    // 先固定當前位置，再於下一幀移動到左上角 Header。
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        Object.assign(introLogoWrap.style, {
-          left: `${targetRect.left}px`,
-          top: `${targetRect.top}px`,
-          width: `${targetRect.width}px`,
-          height: `${targetRect.height}px`,
-          transform: "translateZ(0)",
+    const deltaX = targetRect.left - startRect.left;
+    const deltaY = targetRect.top - startRect.top;
+    const targetScaleX = targetRect.width / startRect.width;
+    const targetScaleY = targetRect.height / startRect.height;
+
+    // 使用中途控制點形成自然弧線，而不是直線飛到左上角。
+    const controlX = deltaX * 0.56;
+    const controlY = deltaY * 0.36 - 34;
+
+    introLogoWrap.animate(
+      [
+        {
+          transform: "translate3d(0,0,0) scale(1)",
+          filter: "drop-shadow(0 0 22px rgba(139,92,246,.34))"
+        },
+        {
+          transform: `translate3d(${controlX}px,${controlY}px,0) scale(${Math.max(targetScaleX, targetScaleY) * 1.65})`,
+          offset: 0.56,
+          filter: "drop-shadow(0 0 18px rgba(139,92,246,.28))"
+        },
+        {
+          transform: `translate3d(${deltaX}px,${deltaY}px,0) scale(${targetScaleX},${targetScaleY})`,
           filter: "drop-shadow(0 0 10px rgba(139,92,246,.22))"
-        });
-      });
-    });
+        }
+      ],
+      {
+        duration: 560,
+        easing: "cubic-bezier(.22,.8,.24,1)",
+        fill: "forwards"
+      }
+    );
 
     setTimeout(() => {
       intro.classList.add("is-leaving");
@@ -76,7 +90,7 @@
       rememberBrandIntroPlayed();
 
       setTimeout(() => intro.remove(), 520);
-    }, 620);
+    }, 580);
   }
 
   window.addEventListener("load", () => {
@@ -87,7 +101,7 @@
       return;
     }
 
-    setTimeout(finishBrandIntro, reduceMotion ? 160 : 2500);
+    setTimeout(finishBrandIntro, reduceMotion ? 160 : 2000);
   });
 
   const cfg = window.HAWKVISION_CONFIG || {};

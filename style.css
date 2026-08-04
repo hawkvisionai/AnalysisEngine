@@ -140,7 +140,7 @@ body.brand-intro-active{overflow:hidden}
   border-radius:50%;transform:translate(-50%,-50%);
   background:radial-gradient(circle,#fff7c2 0 15%,#f5c542 28%,rgba(245,197,66,.5) 48%,transparent 72%);
   opacity:0;filter:blur(.2px);
-  animation:hawk-eye-blink 2.25s ease-in-out both;
+  animation:hawk-eye-blink 1.75s ease-in-out both;
   box-shadow:0 0 10px #f5c542,0 0 24px rgba(245,197,66,.85),0 0 42px rgba(139,92,246,.35);
 }
 .intro-name{
@@ -157,7 +157,14 @@ body.brand-intro-active{overflow:hidden}
   to{opacity:1;transform:translateY(-1vh) scale(1)}
 }
 @keyframes hawk-eye-blink{
-  0%,14%{opacity:0;transform:translate(-50%,-50%) scale(.6)}
+  0%,10%{opacity:0;transform:translate(-50%,-50%) scale(.55)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.28)}
+  28%{opacity:.12;transform:translate(-50%,-50%) scale(.84)}
+  42%{opacity:.7;transform:translate(-50%,-50%) scale(1)}
+  56%{opacity:.08}
+  72%{opacity:.48;transform:translate(-50%,-50%) scale(.92)}
+  86%,100%{opacity:0}
+}
   20%{opacity:1;transform:translate(-50%,-50%) scale(1.22)}
   29%{opacity:.08}
   37%{opacity:1;transform:translate(-50%,-50%) scale(1)}
@@ -308,4 +315,14 @@ body.brand-skip-intro .header-logo{
     transition:none !important;
     animation:none !important;
   }
+}
+
+
+/* v3.0 Preview 2：品牌轉場節奏微調 */
+body.brand-ready .brand-copy{
+  animation:header-brand-copy-in .36s .08s ease both;
+}
+@keyframes header-brand-copy-in{
+  from{opacity:0;transform:translateX(-6px)}
+  to{opacity:1;transform:translateX(0)}
 }
