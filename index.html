@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#151321">
-  <title>HawkVision Analysis v2.3</title>
+  <title>HawkVision Analysis v2.5</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -74,9 +74,12 @@
         </div>
 
         <div class="decision-block">
-          <div class="decision">
+          <div id="decisionCard" class="decision neutral">
             <span>本次判定</span>
-            <strong id="decisionValue">—</strong>
+            <div class="decision-result-row">
+              <strong id="decisionValue">—</strong>
+              <em id="decisionPercent" class="decision-percent">—</em>
+            </div>
           </div>
           <div class="confidence">
             <span>信心度</span>

@@ -9,14 +9,17 @@
     // 每一局對正確／錯誤的影響，用於撤銷時同步還原。
     evaluations: [],
     correct: 0,
-    wrong: 0
+    wrong: 0,
+    isAnalyzing: false
   };
+
+  const SESSION_KEY = "hawkvision_active_shoe_v25";
 
   const $ = id => document.getElementById(id);
   const els = {
     grid: $("beadGrid"), dbStatus: $("dbStatus"), lookback: $("lookback"),
     analyzeBtn: $("analyzeBtn"), undoBtn: $("undoBtn"), newShoeBtn: $("newShoeBtn"),
-    roundCount: $("roundCount"), decision: $("decisionValue"), confidence: $("confidenceValue"),
+    roundCount: $("roundCount"), decisionCard: $("decisionCard"), decision: $("decisionValue"), decisionPercent: $("decisionPercent"), confidence: $("confidenceValue"),
     warning: $("warning"), streakStatus: $("streakStatus"),
     maxWinStreak: $("maxWinStreak"), maxLossStreak: $("maxLossStreak"),
     correct: $("correctCount"), wrong: $("wrongCount"), accuracy: $("accuracyRate"),
@@ -36,6 +39,115 @@
   function setDbStatus(text, type) {
     els.dbStatus.textContent = text;
     els.dbStatus.className = `db-status ${type}`;
+  }
+
+  function setDecisionTheme(outcome = null, flash = false) {
+    const themeClass =
+      outcome === "莊" ? "banker-theme" :
+      outcome === "閒" ? "player-theme" :
+      outcome === "和" ? "tie-theme" :
+      "neutral";
+
+    els.decisionCard.className = `decision ${themeClass}`;
+
+    if (flash && outcome) {
+      void els.decisionCard.offsetWidth;
+      els.decisionCard.classList.add("result-flash");
+      setTimeout(() => els.decisionCard.classList.remove("result-flash"), 320);
+    }
+  }
+
+  function showDecisionResult(outcome, percentText, flash = true) {
+    els.decision.textContent = outcome || "—";
+    els.decisionPercent.textContent = percentText || "—";
+    setDecisionTheme(outcome, flash);
+  }
+
+  function clearDecisionResult() {
+    els.decision.textContent = "—";
+    els.decisionPercent.textContent = "—";
+    setDecisionTheme(null, false);
+  }
+
+  function saveSession() {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        rounds: state.rounds,
+        analysisStarted: state.analysisStarted,
+        pendingPrediction: state.pendingPrediction,
+        evaluations: state.evaluations,
+        correct: state.correct,
+        wrong: state.wrong,
+        lookback: els.lookback.value,
+        decision: els.decision.textContent,
+        decisionPercent: els.decisionPercent.textContent,
+        decisionTheme:
+          els.decision.textContent === "莊" ? "莊" :
+          els.decision.textContent === "閒" ? "閒" :
+          els.decision.textContent === "和" ? "和" : null,
+        confidence: els.confidence.textContent,
+        warningVisible: !els.warning.classList.contains("hidden")
+      }));
+    } catch (error) {
+      console.warn("無法暫存目前牌靴", error);
+    }
+  }
+
+  function restoreSession() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return false;
+
+      const saved = JSON.parse(raw);
+      state.rounds = Array.isArray(saved.rounds) ? saved.rounds.slice(0, 66) : [];
+      state.analysisStarted = Boolean(saved.analysisStarted);
+      state.pendingPrediction = saved.pendingPrediction || null;
+      state.evaluations = Array.isArray(saved.evaluations)
+        ? saved.evaluations.slice(0, state.rounds.length)
+        : [];
+      while (state.evaluations.length < state.rounds.length) state.evaluations.push(null);
+      state.correct = Math.max(0, Number(saved.correct || 0));
+      state.wrong = Math.max(0, Number(saved.wrong || 0));
+
+      if (saved.lookback && els.lookback.querySelector(`option[value="${saved.lookback}"]`)) {
+        els.lookback.value = saved.lookback;
+      }
+
+      els.decision.textContent = saved.decision || "—";
+      els.decisionPercent.textContent = saved.decisionPercent || saved.confidence || "—";
+      setDecisionTheme(saved.decisionTheme || saved.decision || null, false);
+      els.confidence.textContent = saved.confidence || "—";
+      els.warning.classList.toggle("hidden", !saved.warningVisible);
+      return state.rounds.length > 0;
+    } catch (error) {
+      sessionStorage.removeItem(SESSION_KEY);
+      console.warn("暫存資料格式錯誤，已清除", error);
+      return false;
+    }
+  }
+
+  function clearSession() {
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch (error) {
+      console.warn("無法清除暫存", error);
+    }
+  }
+
+  function setAnalyzing(isAnalyzing) {
+    state.isAnalyzing = isAnalyzing;
+    els.analyzeBtn.disabled = isAnalyzing;
+    document.querySelectorAll("[data-result]").forEach(button => {
+      button.disabled = isAnalyzing;
+    });
+
+    if (isAnalyzing) {
+      els.decisionCard.className = "decision loading-theme";
+      els.decision.innerHTML = '<span class="analysis-spinner" aria-label="分析載入中"></span>';
+      els.decisionPercent.textContent = "—";
+      els.confidence.textContent = "—";
+      els.warning.classList.add("hidden");
+    }
   }
 
   function hasValidConfig() {
@@ -198,7 +310,7 @@
   }
 
   function resetAnalysisDisplay() {
-    els.decision.textContent = "—";
+    clearDecisionResult();
     els.confidence.textContent = "—";
     els.warning.classList.add("hidden");
   }
@@ -211,7 +323,7 @@
     }
 
     const originalSequence = state.rounds.slice(-length);
-    els.analyzeBtn.disabled = true;
+    setAnalyzing(true);
 
     try {
       let searchSequence = [...originalSequence];
@@ -240,11 +352,12 @@
       }
 
       if (!total) {
-        els.decision.textContent = "—";
+        clearDecisionResult();
         els.confidence.textContent = "—";
         // 會員端不顯示「找不到相同歷史序列」或任何歷史樣本資訊。
         els.warning.classList.add("hidden");
         state.pendingPrediction = null;
+        saveSession();
         return;
       }
 
@@ -268,27 +381,31 @@
       const lowConfidence =
         confidence < Number(cfg.LOW_CONFIDENCE_PERCENT || 40);
 
-      els.decision.textContent = outcome;
+      showDecisionResult(outcome, `${confidence}%`, true);
       els.confidence.textContent = `${confidence}%`;
       els.warning.classList.toggle("hidden", !lowConfidence);
       state.pendingPrediction = outcome;
       state.analysisStarted = true;
+      saveSession();
 
       if (!auto) showToast("分析完成");
     } catch (error) {
       // 會員端不顯示技術錯誤或歷史搜尋細節。
-      els.decision.textContent = "—";
+      clearDecisionResult();
       els.confidence.textContent = "—";
       els.warning.classList.add("hidden");
       setDbStatus("資料庫連線或函式有誤", "error");
       showToast("分析暫時無法使用");
+      saveSession();
       console.error(error);
     } finally {
-      els.analyzeBtn.disabled = false;
+      setAnalyzing(false);
     }
   }
 
   async function addRound(result) {
+    if (state.isAnalyzing) return;
+
     if (state.rounds.length >= 66) {
       showToast("珠盤路已達 66 局");
       return;
@@ -314,6 +431,7 @@
     state.rounds.push(result);
     state.evaluations.push(evaluation);
     renderAll();
+    saveSession();
 
     if (state.analysisStarted) {
       await analyze(true);
@@ -321,6 +439,8 @@
   }
 
   function undo() {
+    if (state.isAnalyzing) return;
+
     if (!state.rounds.length) {
       showToast("目前沒有可撤銷的牌局");
       return;
@@ -335,11 +455,13 @@
 
     state.pendingPrediction = null;
     renderAll();
+    saveSession();
 
     if (state.analysisStarted && state.rounds.length >= Number(els.lookback.value)) {
       analyze(true);
     } else {
       resetAnalysisDisplay();
+      saveSession();
     }
   }
 
@@ -352,6 +474,7 @@
     state.wrong = 0;
     renderAll();
     resetAnalysisDisplay();
+    clearSession();
     els.modal.classList.add("hidden");
     showToast("已開始新牌靴");
   }
@@ -366,12 +489,19 @@
   els.cancelNewShoe.addEventListener("click", () => els.modal.classList.add("hidden"));
   els.confirmNewShoe.addEventListener("click", startNewShoe);
   els.lookback.addEventListener("change", () => {
+    saveSession();
     if (state.analysisStarted) analyze(true);
   });
   els.advancedMode.addEventListener("click", () => {
     showToast("B 完整牌局將由管理員權限控制，測試版尚未開放");
   });
 
+  const restored = restoreSession();
   renderAll();
   testConnection();
+
+  // 若會員在分析已啟動後誤按 F5，恢復牌靴並重新取得最新判定。
+  if (restored && state.analysisStarted && state.rounds.length >= Number(els.lookback.value)) {
+    analyze(true);
+  }
 })();

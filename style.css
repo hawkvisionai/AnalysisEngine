@@ -30,3 +30,89 @@ select{background:#3a334d}.primary{align-self:end;background:#2746e6;font-weight
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.66);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}.modal-card{width:min(370px,100%);background:#4f4568;border:1px solid var(--line);border-radius:16px;padding:18px}.modal-card p{color:var(--muted);margin-top:8px}.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);background:#241f31;border:1px solid #9a91aa;border-radius:999px;padding:10px 15px;opacity:0;transition:.2s;z-index:30}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:800px){body{padding:10px}.top-grid{grid-template-columns:1fr}.result{max-width:90px;font-size:34px}.decision strong{font-size:60px}.bead-header{align-items:flex-start;flex-direction:column}.totals{width:100%;grid-template-columns:repeat(4,1fr)}.streak-grid{grid-template-columns:1.2fr 1fr 1fr}.streak-status strong,.streak-stat strong{font-size:18px}}
+
+.result:disabled,.primary:disabled{opacity:.62;cursor:wait}
+.analysis-spinner{display:inline-block!important;width:58px;height:58px;margin:14px auto 8px;border:7px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:analysis-spin .8s linear infinite}
+@keyframes analysis-spin{to{transform:rotate(360deg)}}
+@media(max-width:800px){.analysis-spinner{width:46px;height:46px;border-width:6px}}
+
+
+/* v2.6：判定框依莊／閒／和自動變色，並顯示結果百分比 */
+.decision{
+  position:relative;
+  overflow:hidden;
+  transition:background .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+.decision-result-row{
+  min-height:86px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:22px;
+  padding:4px 16px 0 20px;
+}
+.decision-result-row strong{
+  display:block;
+  margin:0;
+  font-size:80px;
+  line-height:1;
+  text-align:left;
+}
+.decision-percent{
+  display:block;
+  margin-left:auto;
+  font-size:38px;
+  line-height:1;
+  font-style:normal;
+  font-weight:900;
+  color:#fff;
+  opacity:.94;
+  white-space:nowrap;
+}
+.decision.neutral{
+  background:rgba(37,30,51,.28);
+  border-color:rgba(255,255,255,.22);
+  box-shadow:none;
+}
+.decision.banker-theme{
+  background:linear-gradient(135deg,rgba(116,35,66,.9),rgba(80,41,91,.92));
+  border-color:rgba(255,91,108,.72);
+  box-shadow:0 0 22px rgba(255,65,87,.2),inset 0 0 18px rgba(255,255,255,.04);
+}
+.decision.player-theme{
+  background:linear-gradient(135deg,rgba(38,56,128,.92),rgba(65,45,113,.92));
+  border-color:rgba(93,134,255,.78);
+  box-shadow:0 0 22px rgba(46,94,255,.22),inset 0 0 18px rgba(255,255,255,.04);
+}
+.decision.tie-theme{
+  background:linear-gradient(135deg,rgba(24,111,86,.9),rgba(61,67,106,.92));
+  border-color:rgba(67,220,167,.72);
+  box-shadow:0 0 22px rgba(44,209,154,.2),inset 0 0 18px rgba(255,255,255,.04);
+}
+.decision.loading-theme{
+  background:rgba(37,30,51,.4);
+  border-color:rgba(255,255,255,.3);
+  box-shadow:none;
+}
+.decision.result-flash{
+  animation:decision-result-flash .28s ease-out;
+}
+@keyframes decision-result-flash{
+  0%{transform:scale(.985);filter:brightness(1.35)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+.decision.loading-theme .decision-result-row{
+  justify-content:center;
+  padding:0;
+}
+.decision.loading-theme .decision-percent{
+  display:none;
+}
+.decision.loading-theme .analysis-spinner{
+  margin:0 auto;
+}
+@media(max-width:800px){
+  .decision-result-row{min-height:70px;gap:12px;padding:2px 8px 0 10px}
+  .decision-result-row strong{font-size:58px}
+  .decision-percent{font-size:27px}
+}
