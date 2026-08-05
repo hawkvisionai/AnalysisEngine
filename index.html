@@ -1,20 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#151321">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
   <title>HawkVision</title>
-  <link rel="icon" type="image/png" href="favicon.png?v=6">
-  <link rel="shortcut icon" href="favicon.ico?v=6">
-  <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=6">
-  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="favicon.png?v=1" />
+  <link rel="shortcut icon" href="favicon.ico?v=1" />
+  <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=1" />
+  <link rel="stylesheet" href="style.css?v=16.9.2" />
 </head>
 <body class="brand-intro-active">
   <div id="brandIntro" class="brand-intro" aria-label="HawkVision 品牌開場">
     <div class="intro-brand">
       <div class="intro-logo-wrap">
-        <img src="hawkvision-logo.png" alt="HawkVision Logo" class="intro-logo">
+        <img src="hawkvision-logo.png" alt="HawkVision Logo" class="intro-logo" />
         <span class="intro-eye-flash" aria-hidden="true"></span>
       </div>
       <div class="intro-name">Hawk<span>Vision</span></div>
@@ -22,141 +22,274 @@
     </div>
   </div>
 
-  <main class="app-shell">
-    <header class="brand-bar">
+  <main class="container">
+    <header class="topbar">
       <div class="brand-lockup">
-        <img src="hawkvision-logo.png" alt="HawkVision Logo" class="header-logo">
+        <img src="hawkvision-logo.png" alt="HawkVision Logo" class="header-logo" />
         <div class="brand-copy">
           <h1>Hawk<span>Vision</span></h1>
           <p>SEE EVERY MOVE. STAY AHEAD.</p>
         </div>
       </div>
-      <div id="dbStatus" class="db-status waiting">資料庫尚未連線</div>
+      <div id="userArea" class="user-area hidden">
+        <div class="user-meta"><strong id="userDisplayName">—</strong><span id="userRoleBadge" class="role-badge">—</span></div>
+        <button id="dashboardButton" class="primary hidden" type="button">管理總覽</button>
+        <button id="userManagerButton" class="warning hidden" type="button">人員管理</button>
+        <button id="logoutButton" class="secondary" type="button">登出</button>
+      </div>
     </header>
 
-    <section class="top-grid">
-      <article class="card control-card">
-        <div class="section-title">
-          <div>
-            <span class="eyebrow">INPUT</span>
-            <h2>輸入目前牌局</h2>
-          </div>
-          <div class="mode-switch">
-            <button class="mode active" type="button">基礎分析</button>
-            <button id="advancedMode" class="mode" type="button">完整牌局</button>
-          </div>
-        </div>
-
-        <div class="result-buttons">
-          <button class="result banker" data-result="莊" type="button">莊</button>
-          <button class="result player" data-result="閒" type="button">閒</button>
-          <button class="result tie" data-result="和" type="button">和</button>
-        </div>
-
-        <div class="action-grid">
-          <label class="field">
-            <span>最近分析局數</span>
-            <select id="lookback">
-              <option value="3">最近 3 局</option>
-              <option value="4">最近 4 局</option>
-              <option value="5">最近 5 局</option>
-              <option value="6">最近 6 局</option>
-              <option value="7">最近 7 局</option>
-              <option value="8" selected>最近 8 局</option>
-              <option value="9">最近 9 局</option>
-              <option value="10">最近 10 局</option>
-              <option value="11">最近 11 局</option>
-              <option value="12">最近 12 局</option>
-            </select>
-          </label>
-          <button id="analyzeBtn" class="primary" type="button">分析下一局</button>
-        </div>
-
-        <div class="tool-row">
-          <button id="undoBtn" class="secondary" type="button">撤銷上一局</button>
-          <button id="newShoeBtn" class="danger" type="button">開始新牌靴</button>
-          <div class="round-count">已輸入 <strong id="roundCount">0</strong> 局</div>
-        </div>
-      </article>
-
-      <article class="card result-card">
-        <div class="section-title compact">
-          <div>
-            <span class="eyebrow">RESULT</span>
-            <h2>下一局分析結果</h2>
-          </div>
-        </div>
-
-        <div class="decision-block">
-          <div id="decisionCard" class="decision neutral">
-            <span>本次判定</span>
-            <div class="decision-result-row">
-              <strong id="decisionValue">AI 待命中</strong>
-              <em id="decisionPercent" class="decision-percent"></em>
-            </div>
-          </div>
-          <div class="confidence">
-            <span>信心度</span>
-            <strong id="confidenceValue">等待分析</strong>
-            <div id="warning" class="confidence-warning hidden">信心度過低，不建議下注</div>
-          </div>
-        </div>
-
-        <div class="streak-grid" aria-label="連勝連敗統計">
-          <div id="streakStatus" class="streak-status neutral">
-            <span>目前狀態</span>
-            <strong>尚無紀錄</strong>
-          </div>
-          <div class="streak-stat best-win">
-            <span>最高連勝</span>
-            <strong id="maxWinStreak">0</strong>
-          </div>
-          <div class="streak-stat best-loss">
-            <span>最高連敗</span>
-            <strong id="maxLossStreak">0</strong>
-          </div>
-        </div>
-
-        <div class="accuracy">
-          <div><span>正確</span><strong id="correctCount">0</strong></div>
-          <div><span>錯誤</span><strong id="wrongCount">0</strong></div>
-          <div><span>正確率</span><strong id="accuracyRate">—</strong></div>
-        </div>
-      </article>
-    </section>
-
-    <section class="card bead-card">
-      <div class="bead-header">
+    <section id="loginPanel" class="card login-card">
+      <div class="login-brand">
+        <img src="hawkvision-logo.png" alt="" class="login-logo" />
         <div>
-          <span class="eyebrow">CURRENT SHOE</span>
-          <h2>珠盤路</h2>
-        </div>
-        <div class="totals">
-          <div><span>莊</span><strong id="bankerTotal">0</strong></div>
-          <div><span>閒</span><strong id="playerTotal">0</strong></div>
-          <div><span>和</span><strong id="tieTotal">0</strong></div>
-          <div><span>總局數</span><strong id="totalRounds">0</strong></div>
+          <span class="login-kicker">HAWKVISION RECORD STUDIO</span>
+          <h2>人員登入</h2>
+          <p>進入牌局記錄與管理平台</p>
         </div>
       </div>
+      <label>帳號<input id="emailInput" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="管理員可用 Email；記錄員輸入帳號" /></label>
+      <label>密碼<input id="passwordInput" type="password" autocomplete="current-password" placeholder="你的密碼" /></label>
+      <button id="loginButton" class="primary" type="button">登入</button>
+      <p id="loginMessage" class="message"></p><p class="login-note">帳號由管理員建立，不開放自行註冊。</p>
+    </section>
 
-      <div id="beadGrid" class="bead-grid" aria-label="66 格珠盤路"></div>
+    <section id="appPanel" class="hidden">
+      <section class="card status-card">
+        <div><span class="eyebrow">目前牌靴</span><strong id="shoeNumber">尚未建立</strong></div>
+        <div><span class="eyebrow">目前場館</span><strong id="currentVenue">尚未選擇</strong></div>
+        <div><span class="eyebrow">目前局數</span><strong id="nextGameNumber">第 1 局</strong></div>
+        <div><span class="eyebrow">負責人</span><strong id="shoeOwner">—</strong></div><div><span class="eyebrow">同步狀態</span><strong id="syncStatus" class="status pending">準備中</strong></div>
+      </section>
+
+      <section class="card">
+        <div class="section-head recording-section-head">
+          <div class="recording-title-block">
+            <div class="recording-title-row">
+              <h2>牌局輸入</h2>
+              <div id="captureMethodRow" class="capture-method-row">
+                <button id="manualInputMethod" class="method-button active" type="button">手動</button>
+                <button id="aiInputMethod" class="method-button hidden" type="button">AI 辨識</button>
+              </div>
+            </div>
+          </div>
+          <span id="shoeState" class="badge">未開始</span>
+        </div>
+
+        <div class="mode-row">
+          <button id="modeComplete" class="mode-button active" type="button">完整記錄</button>
+          <button id="modeWinnerOnly" class="mode-button" type="button">只記勝方</button>
+        </div>
+
+        <div class="record-head-row">
+          <label class="game-number-label">本次記錄局數
+            <input id="gameNumberInput" type="number" min="1" inputmode="numeric" value="1" />
+          </label>
+          <div id="recordState" class="record-state incomplete" role="status">尚未輸入完整</div>
+        </div>
+
+        <div id="completePanel">
+          <div id="aiCaptureControls" class="ai-capture-controls hidden">
+            <button id="aiCameraButton" class="primary camera-button" type="button">📷 拍照辨識</button>
+          </div>
+          <div id="cardSteps" class="card-steps"></div>
+          <div id="completeSummary" class="complete-summary hidden"></div>
+        </div>
+
+        <div id="winnerOnlyPanel" class="hidden">
+          <div class="winner-only-panel">
+            <button class="winner-button player" type="button" data-winner="閒">閒</button>
+            <button class="winner-button banker" type="button" data-winner="莊">莊</button>
+            <button class="winner-button tie" type="button" data-winner="和">和</button>
+          </div>
+          <div class="winner-options">
+            <button id="winnerPlayerPair" class="check-toggle" type="button" aria-pressed="false">☐ 閒對</button>
+            <button id="winnerBankerPair" class="check-toggle" type="button" aria-pressed="false">☐ 莊對</button>
+            <button id="winnerSuperSix" class="check-toggle hidden" type="button" aria-pressed="false">☐ Lucky 6（幸運六）</button>
+          </div>
+        </div>
+
+        <div id="nextRoundHome">
+          <button id="nextRoundButton" class="primary large" type="button" disabled>下一局</button>
+        </div>
+        <p id="appMessage" class="message"></p>
+        <div class="action-grid">
+          <button id="undoButton" class="secondary" type="button">刪除上一局</button>
+          <button id="newShoeButton" class="success" type="button">新增牌靴</button><button id="finishShoeButton" class="archive" type="button">完成牌靴</button>
+          <button id="myRecentShoesButton" class="primary" type="button">查看我的最近牌靴</button>
+          <button id="manageShoesButton" class="warning" type="button">牌靴管理</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head"><h2>最近 10 局</h2><button id="refreshButton" class="secondary compact" type="button">重新整理</button></div>
+        <div id="recentGames" class="recent-list"><p class="empty">尚無牌局資料</p></div>
+      </section>
     </section>
   </main>
 
-  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <h3>開始新牌靴？</h3>
-      <p>目前牌局、珠盤路、分析結果與正確率都會清空。</p>
-      <div class="modal-actions">
-        <button id="cancelNewShoe" class="secondary" type="button">取消</button>
-        <button id="confirmNewShoe" class="danger" type="button">開始新牌靴</button>
+  <div id="newShoeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="newShoeTitle">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <section class="modal-card">
+      <div class="section-head"><div><h2 id="newShoeTitle">新增牌靴</h2><p class="section-note">每位人員只會操作自己建立的進行中牌靴。</p></div><button id="closeShoeModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <label>場館<div class="venue-input-row"><select id="venueSelect"></select><button id="addVenueButton" class="secondary" type="button">＋ 新增</button></div></label>
+      <label>牌靴名稱（選填）<input id="shoeNameInput" type="text" maxlength="60" placeholder="例如：晚場 A 桌" /></label>
+      <label>開始記錄局數<input id="startGameInput" type="number" min="1" inputmode="numeric" value="1" /></label>
+      <label class="default-venue-row"><input id="defaultVenueCheckbox" type="checkbox" /><span>設為預設場館</span></label>
+      <p id="shoeModalMessage" class="message"></p>
+      <div class="modal-actions"><button id="cancelShoeButton" class="secondary" type="button">取消</button><button id="confirmShoeButton" class="success" type="button">建立牌靴</button></div>
+    </section>
+  </div>
+
+  <div id="shoeManagerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shoeManagerTitle">
+    <div class="modal-backdrop" data-close-manager="true"></div>
+    <section class="modal-card manager-card">
+      <div class="section-head"><div><h2 id="shoeManagerTitle">牌靴管理</h2><p class="section-note">查看、修改、封存或刪除牌靴。</p></div><button id="closeManagerModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div class="manager-filters"><input id="shoeSearchInput" type="search" placeholder="搜尋牌靴編號、名稱或場館" /><select id="shoeStatusFilter"><option value="active">正常牌靴</option><option value="archived">已封存</option><option value="all">全部</option></select></div>
+      <p id="managerMessage" class="message"></p><div id="shoeManagerList" class="shoe-manager-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="shoeDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shoeDetailTitle">
+    <div class="modal-backdrop" data-close-detail="true"></div>
+    <section class="modal-card manager-card">
+      <div class="section-head"><div><h2 id="shoeDetailTitle">牌靴內容</h2><p id="shoeDetailMeta" class="section-note"></p></div><button id="closeDetailModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div id="shoeDetailSummary" class="shoe-detail-summary"><p class="empty">讀取中…</p></div>
+      <button id="showShoeGamesButton" class="primary shoe-games-button hidden" type="button">查看各局記錄</button>
+      <div id="shoeDetailGames" class="recent-list hidden"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="editShoeModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editShoeTitle">
+    <div class="modal-backdrop" data-close-edit="true"></div>
+    <section class="modal-card">
+      <div class="section-head"><div><h2 id="editShoeTitle">修改牌靴</h2><p class="section-note">可修改場館與牌靴名稱。</p></div><button id="closeEditModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <label>場館<select id="editVenueSelect"></select></label><label>牌靴名稱（選填）<input id="editShoeNameInput" type="text" maxlength="60" /></label>
+      <p id="editShoeMessage" class="message"></p><div class="modal-actions"><button id="cancelEditShoeButton" class="secondary" type="button">取消</button><button id="saveEditShoeButton" class="success" type="button">儲存修改</button></div>
+    </section>
+  </div>
+
+
+  <div id="dashboardModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="dashboardTitle">
+    <div class="modal-backdrop" data-close-dashboard="true"></div>
+    <section class="modal-card dashboard-card">
+      <div class="section-head dashboard-heading"><div><h2 id="dashboardTitle">管理總覽</h2><p class="section-note">查看目前與最近完成的牌靴，並快速查找歷史牌靴。</p></div><div class="dashboard-head-actions"><span id="dashboardUpdatedAt" class="dashboard-updated">—</span><button id="refreshDashboardButton" class="secondary compact" type="button">重新整理</button><button id="closeDashboardModal" class="icon-button" type="button" aria-label="關閉">×</button></div></div>
+      <p id="dashboardMessage" class="message"></p>
+      <div class="dashboard-search">
+        <input id="dashboardShoeSearchInput" type="search" placeholder="輸入牌靴編號、名稱或場館" />
+        <button id="dashboardShoeSearchButton" class="primary" type="button">搜尋牌靴</button>
+      </div>
+      <div id="dashboardSearchResults" class="dashboard-search-results hidden"></div>
+      <div class="dashboard-stats dashboard-stats-four">
+        <button class="dashboard-stat dashboard-stat-button" data-dashboard-view="active" type="button"><span>進行中牌靴</span><strong id="statActiveShoes">0</strong><small>副牌靴</small></button>
+        <button class="dashboard-stat dashboard-stat-button" data-dashboard-view="today" type="button"><span>今日完成牌靴</span><strong id="statTodayFinished">0</strong><small>副牌靴</small></button>
+        <button class="dashboard-stat dashboard-stat-button" data-dashboard-view="finished" type="button"><span>總完成牌靴數</span><strong id="statTotalShoes">0</strong><small>副</small></button>
+        <button class="dashboard-stat dashboard-stat-button" data-dashboard-view="games" type="button"><span>總累計局數</span><strong id="statTotalGames">0</strong><small>局</small></button>
+      </div>
+      <div class="dashboard-grid">
+        <section class="dashboard-panel"><div class="section-head"><h3>進行中的牌靴</h3><span id="dashboardShoeSummary" class="mini-badge">—</span></div><div id="dashboardActiveShoes" class="dashboard-list"><p class="empty">讀取中…</p></div></section>
+        <section class="dashboard-panel"><div class="section-head"><h3>最近完成牌靴</h3><button id="openFinishedHistoryButton" class="secondary compact" type="button">查看最近 50 副</button></div><div id="dashboardFinishedShoes" class="dashboard-list"><p class="empty">讀取中…</p></div></section>
+      </div>
+      <section class="dashboard-panel dashboard-personnel-inline">
+        <div class="section-head"><div><h3>人員記錄統計</h3><p class="section-note">點擊人員可查看最近完成的牌靴與各局細項。</p></div><span id="dashboardPersonnelCount" class="mini-badge">0 人</span></div>
+        <div class="admin-filter-row"><input id="dashboardPersonnelSearch" type="search" placeholder="搜尋人員名稱或帳號" /></div>
+        <p id="dashboardPersonnelMessage" class="message"></p>
+        <div id="dashboardPersonnelList" class="personnel-stats-list"><p class="empty">讀取中…</p></div>
+      </section>
+    </section>
+  </div>
+
+  <div id="managementListModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="managementListTitle">
+    <div class="modal-backdrop" data-close-management-list="true"></div>
+    <section class="modal-card manager-card admin-detail-card">
+      <div class="section-head"><div><h2 id="managementListTitle">牌靴列表</h2><p id="managementListMeta" class="section-note">—</p></div><button id="closeManagementListModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div class="admin-filter-row"><input id="managementListSearch" type="search" placeholder="搜尋牌靴編號、場館或記錄人員" /><span id="managementListCount" class="mini-badge">0</span></div>
+      <p id="managementListMessage" class="message"></p>
+      <div id="managementListBody" class="admin-record-list"><p class="empty">讀取中…</p></div>
+      <button id="managementLoadMoreButton" class="secondary hidden" type="button">載入更多</button>
+    </section>
+  </div>
+
+  <div id="myRecentShoesModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="myRecentShoesTitle">
+    <div class="modal-backdrop" data-close-my-recent-shoes="true"></div>
+    <section class="modal-card manager-card admin-detail-card">
+      <div class="section-head"><div><h2 id="myRecentShoesTitle">我的最近牌靴</h2><p class="section-note">最近完成的 20 副牌靴。點擊牌靴可唯讀查看各局細項。</p></div><button id="closeMyRecentShoesModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <p id="myRecentShoesMessage" class="message"></p>
+      <div id="myRecentShoesList" class="admin-record-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="finishedHistoryModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="finishedHistoryTitle">
+    <div class="modal-backdrop" data-close-finished-history="true"></div>
+    <section class="modal-card manager-card admin-detail-card">
+      <div class="section-head"><div><h2 id="finishedHistoryTitle">最近完成的牌靴</h2><p class="section-note">依完成時間由新到舊，最多顯示 50 副。點擊任一牌靴可查看完整逐局資料。</p></div><button id="closeFinishedHistoryModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div class="admin-filter-row"><input id="finishedHistorySearch" type="search" placeholder="搜尋牌靴名稱、場館或記錄者" /><span id="finishedHistoryCount" class="mini-badge">0 副</span></div>
+      <p id="finishedHistoryMessage" class="message"></p>
+      <div id="finishedHistoryList" class="admin-record-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="personnelStatsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="personnelStatsTitle">
+    <div class="modal-backdrop" data-close-personnel-stats="true"></div>
+    <section class="modal-card manager-card admin-detail-card">
+      <div class="section-head"><div><h2 id="personnelStatsTitle">人員記錄統計</h2><p class="section-note">點擊人員可查看該人員最近完成的牌靴與細項。</p></div><button id="closePersonnelStatsModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div class="admin-filter-row"><input id="personnelSearch" type="search" placeholder="搜尋人員名稱或帳號" /><span id="personnelCount" class="mini-badge">0 人</span></div>
+      <p id="personnelStatsMessage" class="message"></p>
+      <div id="personnelStatsList" class="personnel-stats-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="personnelDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="personnelDetailTitle">
+    <div class="modal-backdrop" data-close-personnel-detail="true"></div>
+    <section class="modal-card manager-card admin-detail-card">
+      <div class="section-head"><div><h2 id="personnelDetailTitle">人員牌靴細項</h2><p id="personnelDetailMeta" class="section-note">—</p></div><button id="closePersonnelDetailModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div id="personnelDetailSummary" class="personnel-summary"></div>
+      <div id="personnelDetailList" class="admin-record-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="userManagerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="userManagerTitle">
+    <div class="modal-backdrop" data-close-users="true"></div>
+    <section class="modal-card manager-card">
+      <div class="section-head"><div><h2 id="userManagerTitle">人員管理</h2><p class="section-note">管理員可以建立、停用、重設密碼及刪除尚無歷史紀錄的人員。</p></div><button id="closeUserManagerModal" class="icon-button" type="button" aria-label="關閉">×</button></div>
+      <div class="user-create-grid">
+        <label>顯示名稱<input id="newUserName" type="text" maxlength="40" placeholder="例如：小王" /></label>
+        <label>登入帳號<input id="newUsername" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="例如：recorder01" /></label>
+        <label>初始密碼<input id="newUserPassword" type="password" autocomplete="new-password" minlength="8" placeholder="至少 8 碼" /></label>
+        <button id="createUserButton" class="success" type="button">建立記錄員</button>
+      </div>
+      <p id="userManagerMessage" class="message"></p>
+      <div class="section-head user-list-head"><h3>人員名單</h3><button id="refreshUsersButton" class="secondary compact" type="button">重新整理</button></div>
+      <div id="userManagerList" class="user-manager-list"><p class="empty">讀取中…</p></div>
+    </section>
+  </div>
+
+  <div id="saveToast" class="save-toast" role="status" aria-live="polite"></div>
+  
+  <div id="cameraCaptureModal" class="camera-capture-modal hidden" role="dialog" aria-modal="true" aria-label="AI 拍照辨識">
+    <div class="camera-stage">
+      <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+      <div id="cameraGuide" class="camera-guide" aria-hidden="true">
+        <span class="camera-guide-label">將開牌區對準六格參考框</span>
+        <div class="camera-side-label camera-side-player">閒</div>
+        <div class="camera-side-label camera-side-vs">VS</div>
+        <div class="camera-side-label camera-side-banker">莊</div>
+        <div class="camera-card-guide p1"><span>P1</span></div>
+        <div class="camera-card-guide p2"><span>P2</span></div>
+        <div class="camera-card-guide p3 horizontal"><span>P3</span></div>
+        <div class="camera-card-guide b1"><span>B1</span></div>
+        <div class="camera-card-guide b2"><span>B2</span></div>
+        <div class="camera-card-guide b3 horizontal"><span>B3</span></div>
+      </div>
+      <div id="cameraPreviousResult" class="camera-previous-result hidden" role="status"></div>
+      <div id="cameraStatus" class="camera-status">正在啟動相機…</div>
+      <div class="camera-actions">
+        <button id="closeCameraButton" class="camera-action secondary" type="button">取消</button>
+        <button id="captureCameraButton" class="camera-shutter" type="button" aria-label="拍照"></button>
+        <span class="camera-action-spacer" aria-hidden="true"></span>
       </div>
     </div>
   </div>
-
-  <div id="toast" class="toast" role="status"></div>
-
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+<script type="module" src="app.js?v=16.9.2"></script>
 </body>
 </html>
