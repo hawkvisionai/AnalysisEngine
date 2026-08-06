@@ -599,7 +599,7 @@
       clearDecisionResult();
       els.confidence.textContent = "—";
       els.warning.classList.add("hidden");
-      setDbStatus("資料庫連線或函式有誤", "error");
+      setDbStatus(error?.message?.includes("57014") || error?.message?.includes("statement timeout") ? "歷史分析資料正在逾時，請執行 v3.1 SQL 優化" : "資料庫連線或函式有誤", "error");
       showToast("分析暫時無法使用");
       saveSession();
       console.error(error);
