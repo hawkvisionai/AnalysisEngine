@@ -44,7 +44,7 @@ async function hvValidateActiveIdentity(client,session){
 
   async function globalLogout(){
     await client.auth.signOut({scope:"global"}).catch(()=>{}); hvClearActiveUser();
-    window.location.href="https://hawkvisionai.com/";
+    window.location.replace("https://hawkvisionai.com/?logout=1");
   }
 
   async function boot(){
