@@ -74,7 +74,7 @@ async function hvValidateActiveIdentity(client,session){
     }
 
     const script=document.createElement("script");
-    script.src="app.js?v=3.2.2";
+    script.src="app.js?v=3.2.4";
     document.body.appendChild(script);
   }
 
