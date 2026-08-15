@@ -43,7 +43,9 @@ async function hvValidateActiveIdentity(client,session){
   const client=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 
   async function globalLogout(){
-    await client.auth.signOut({scope:"global"}).catch(()=>{}); hvClearActiveUser();
+    try{await client.auth.signOut({scope:"global"})}catch{}
+    try{await client.auth.signOut({scope:"local"})}catch{}
+    hvClearActiveUser();
     window.location.replace("https://hawkvisionai.com/?logout=1");
   }
 
@@ -72,11 +74,8 @@ async function hvValidateActiveIdentity(client,session){
       const account=(profile?.email||session.user.email||"").split("@")[0];
       identity.textContent=`${profile?.display_name||account}（${account}）`;
     }
+    document.body.classList.add("hv-auth-ready");
+}
 
-    const script=document.createElement("script");
-    script.src="app.js?v=3.2.4";
-    document.body.appendChild(script);
-  }
-
-  boot().catch(()=>window.location.replace("https://hawkvisionai.com/"));
+  boot().catch((error)=>{console.error("HawkVision auth gate failed",error);window.location.replace("https://hawkvisionai.com/");});
 })();
