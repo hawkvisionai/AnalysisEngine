@@ -179,11 +179,21 @@
     );
   }
 
-  async function currentAnalysisAuthHeaders() {
-    const authClient = window.hvAnalysisAuthClient;
-    if (!authClient) {
-      throw new Error("分析引擎登入驗證尚未完成");
+  async function waitForAnalysisAuthClient(timeoutMs = 10000) {
+    const startedAt = Date.now();
+
+    while (!window.hvAnalysisAuthClient) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw new Error("分析引擎登入驗證逾時，請重新整理頁面");
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    return window.hvAnalysisAuthClient;
+  }
+
+  async function currentAnalysisAuthHeaders() {
+    const authClient = await waitForAnalysisAuthClient();
 
     const { data: { session }, error: sessionError } = await authClient.auth.getSession();
     if (sessionError || !session?.user || !session?.access_token) {
