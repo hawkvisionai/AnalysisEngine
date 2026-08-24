@@ -179,18 +179,46 @@
     );
   }
 
+  async function currentAnalysisAuthHeaders() {
+    const authClient = window.hvAnalysisAuthClient;
+    if (!authClient) {
+      throw new Error("分析引擎登入驗證尚未完成");
+    }
+
+    const { data: { session }, error: sessionError } = await authClient.auth.getSession();
+    if (sessionError || !session?.user || !session?.access_token) {
+      throw new Error("登入狀態已失效，請重新登入");
+    }
+
+    const { data: allowed, error: accessError } = await authClient.rpc("hv_has_product_access", {
+      p_user_id: session.user.id,
+      p_product_key: "analysis_engine"
+    });
+
+    if (accessError) {
+      throw new Error("無法確認分析引擎權限");
+    }
+    if (allowed !== true) {
+      throw new Error("分析引擎權限目前未開放");
+    }
+
+    return {
+      "Content-Type": "application/json",
+      "apikey": cfg.SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${session.access_token}`
+    };
+  }
+
   async function callSearchRpc(sequence) {
     if (!hasValidConfig()) {
       throw new Error("尚未填入 Supabase 公開金鑰");
     }
 
+    const headers = await currentAnalysisAuthHeaders();
+
     const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes_basic`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": cfg.SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${cfg.SUPABASE_ANON_KEY}`
-      },
+      headers,
       body: JSON.stringify({ p_sequence: sequence })
     });
 
@@ -209,13 +237,10 @@
     }
 
     try {
+      const headers = await currentAnalysisAuthHeaders();
       const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/search_next_outcomes_basic`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": cfg.SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${cfg.SUPABASE_ANON_KEY}`
-        },
+        headers,
         body: JSON.stringify({ p_sequence: ["測試"] })
       });
 
