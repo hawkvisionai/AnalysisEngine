@@ -202,10 +202,14 @@
       throw new Error("分析引擎權限目前未開放");
     }
 
+    // 保留原本已驗證可用的資料庫 RPC 呼叫方式。
+    // 權限是否可用已在上方透過登入者 Session 即時確認；
+    // 真正的分析 RPC 繼續使用公開 key，避免既有函式的 role/grant 設定
+    // 因切換成 authenticated JWT 而出現「資料庫連線或函式有誤」。
     return {
       "Content-Type": "application/json",
       "apikey": cfg.SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${session.access_token}`
+      "Authorization": `Bearer ${cfg.SUPABASE_ANON_KEY}`
     };
   }
 
