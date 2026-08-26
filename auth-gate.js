@@ -79,6 +79,8 @@
     window.location.replace("https://hawkvisionai.com/?logout=1");
   }
 
+  window.hvGlobalLogout=globalLogout;
+
   async function checkCurrentAccess(){
     if(checking || !currentUserId)return null;
     checking=true;

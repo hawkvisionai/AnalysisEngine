@@ -108,6 +108,7 @@
         confidence: els.confidence.textContent,
         warningVisible: !els.warning.classList.contains("hidden")
       }));
+      window.hvAnalysisRuntimeSave?.(window.HawkVisionAnalysisCore?.exportState?.());
     } catch (error) {
       console.warn("無法暫存目前牌靴", error);
     }
@@ -568,6 +569,25 @@
   els.advancedMode.addEventListener("click", () => {
     showToast("B 完整牌局將由管理員權限控制，測試版尚未開放");
   });
+
+  window.HawkVisionAnalysisCore={
+    exportState(){return {rounds:[...state.rounds],analysisStarted:state.analysisStarted,pendingPrediction:state.pendingPrediction,evaluations:[...state.evaluations],correct:state.correct,wrong:state.wrong,lookback:els.lookback.value};},
+    importState(saved){
+      if(!saved||typeof saved!=="object")return false;
+      state.rounds=Array.isArray(saved.rounds)?saved.rounds.filter(x=>["莊","閒","和"].includes(x)).slice(0,66):[];
+      state.analysisStarted=Boolean(saved.analysisStarted);
+      state.pendingPrediction=["莊","閒"].includes(saved.pendingPrediction)?saved.pendingPrediction:null;
+      state.evaluations=Array.isArray(saved.evaluations)?saved.evaluations.slice(0,state.rounds.length):[];
+      state.correct=Number(saved.correct||0);state.wrong=Number(saved.wrong||0);
+      if(saved.lookback)els.lookback.value=String(saved.lookback);
+      renderAll();resetAnalysisDisplay();saveSession();
+      const nonTie=state.rounds.filter(x=>x!=="和").length;
+      if(state.analysisStarted&&nonTie>=Number(els.lookback.value))analyze(true);
+      return true;
+    },
+    resetAnalysis(){startNewShoe();},
+    getRoundCount(){return state.rounds.length;}
+  };
 
   const restored = restoreSession();
   renderAll();
