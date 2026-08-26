@@ -566,9 +566,6 @@
     saveSession();
     if (state.analysisStarted) analyze(true);
   });
-  els.advancedMode.addEventListener("click", () => {
-    showToast("B 完整牌局將由管理員權限控制，測試版尚未開放");
-  });
 
   window.HawkVisionAnalysisCore={
     exportState(){return {rounds:[...state.rounds],analysisStarted:state.analysisStarted,pendingPrediction:state.pendingPrediction,evaluations:[...state.evaluations],correct:state.correct,wrong:state.wrong,lookback:els.lookback.value};},

@@ -1,12 +1,12 @@
 (() => {
 "use strict";
-const VERSION="3.3.2";
+const VERSION="3.3.3";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
 if(!client)return;
 const $=id=>document.getElementById(id);
-const state={step:0,user:null,isMember:false,role:"",modes:{basic:true,counting:false,full:false},selectedMode:null,bankrollBase:null,currentBankroll:null,profit:0,betting:null,remaining:0,activeUntil:null,setupComplete:false,deviceToken:"",hourHistory:[],hourInventory:[],lastHoursGeneration:0,lastPasswordGeneration:0,editAction:null,passwordClaim:false};
+const state={step:0,user:null,isMember:false,role:"",modes:{basic:true,counting:false,full:false},selectedMode:null,bankrollBase:null,currentBankroll:null,profit:0,betting:null,remaining:0,activeUntil:null,setupComplete:false,deviceToken:"",hourHistory:[],hourInventory:[],lastHoursGeneration:0,lastPasswordGeneration:0,editAction:null,passwordClaim:false,actualMode:null,modeNotice:""};
 let tickTimer=null,pollTimer=null,saveTimer=null;
 const cookieName="hv-device-token";
 function cookieGet(name){const p=name+"=";const r=document.cookie.split("; ").find(v=>v.startsWith(p));return r?decodeURIComponent(r.slice(p.length)):""}
@@ -29,14 +29,33 @@ function updateTimeUI(){
   applyTimeLock();
 }
 function applyTimeLock(){const locked=state.isMember&&state.setupComplete&&state.remaining<=0;document.body.classList.toggle("hv-time-locked",locked);$("hvLockBanner")?.classList.toggle("show",locked);document.querySelectorAll('#hvFunctionPopover [data-hv-fn]').forEach(b=>{const fn=b.dataset.hvFn;b.disabled=locked&&!["hours","logout"].includes(fn)});}
+function modeName(k){return k==="counting"?"算牌模式":k==="full"?"完整模式":"基礎模式"}
+function renderModeStatus(){
+  const el=$("hvModeStatus");if(!el)return;
+  // 跳過模式時依規格不顯示目前模式。
+  if(!state.selectedMode){el.style.display="none";el.textContent="";return}
+  const actual=state.actualMode||state.selectedMode||"basic";
+  let text=modeName(actual),warn=false;
+  if(state.modeNotice){text=state.modeNotice;warn=true}
+  else if(state.selectedMode==="counting"&&actual==="basic"){text="輸入資料不完整，已切換成基礎模式";warn=true}
+  else if(state.selectedMode==="full"&&actual==="basic"){text="完整資料輸入中，已切換成基礎模式";warn=true}
+  el.textContent=text;el.style.display="block";el.classList.toggle("warn",warn);el.classList.toggle("ok",!warn);
+}
+window.HawkVisionModeState={
+  setActualMode(mode,notice=""){state.actualMode=["basic","counting","full"].includes(mode)?mode:"basic";state.modeNotice=String(notice||"");renderModeStatus();queueSave(window.HawkVisionAnalysisCore?.exportState?.()||{})},
+  markIncomplete(){if(state.selectedMode==="counting"){state.actualMode="basic";state.modeNotice="輸入資料不完整，已切換成基礎模式"}else if(state.selectedMode==="full"){state.actualMode="basic";state.modeNotice="完整資料輸入中，已切換成基礎模式"}renderModeStatus()},
+  restoreFull(){if(state.selectedMode==="full"){state.actualMode="full";state.modeNotice="";renderModeStatus()}},
+  reset(){state.actualMode=state.selectedMode||"basic";state.modeNotice="";renderModeStatus()}
+};
 function renderRuntime(){
   const anyBank=state.bankrollBase!=null;
   $("hvResultMoney")?.classList.toggle("show",anyBank);
   if($("hvBankrollChip"))$("hvBankrollChip").textContent=anyBank?money(state.currentBankroll):"—";
   if($("hvProfitChip"))$("hvProfitChip").textContent=anyBank?`${state.profit>=0?"+":""}${money(state.profit)}`:"—";
+  renderModeStatus();
   updateTimeUI();
 }
-function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.selectedMode,bankroll_base:state.bankrollBase,current_bankroll:state.currentBankroll,profit:state.profit,betting:state.betting,screen:"analysis"}}
+function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.selectedMode,actual_mode:state.actualMode,mode_notice:state.modeNotice,bankroll_base:state.bankrollBase,current_bankroll:state.currentBankroll,profit:state.profit,betting:state.betting,screen:"analysis"}}
 function queueSave(analysisState){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveRuntime(analysisState).catch(()=>{}),250)}
 window.hvAnalysisRuntimeSave=(analysisState)=>queueSave(analysisState);
 async function saveRuntime(analysisState){if(!state.user)return;await rpc("hv_analysis_save_runtime_v1",{p_device_token:state.deviceToken,p_settings:serializeSettings(),p_analysis_state:analysisState||window.HawkVisionAnalysisCore?.exportState?.()||{}})}
@@ -87,7 +106,7 @@ function finishSetup(){state.setupComplete=true;hideShell();showAnalysis();rende
 async function next(){
   setErr("");
   if(state.passwordClaim)return submitPasswordClaim();
-  if(state.editAction==="mode"){if(!state.selectedMode||!isModeSelectable(state.selectedMode)){setErr("請選擇目前可使用的模式");return}if(!confirm("確定變更模式？目前牌局、珠盤路、分析結果與正確率都會清除；本金與配注方式會保留。"))return;window.HawkVisionAnalysisCore?.resetAnalysis?.();state.setupComplete=true;state.editAction=null;hideShell();showAnalysis();renderRuntime();await saveRuntime({});return}
+  if(state.editAction==="mode"){if(!state.selectedMode||!isModeSelectable(state.selectedMode)){setErr("請選擇目前可使用的模式");return}if(!confirm("確定變更模式？目前牌局、珠盤路、分析結果與正確率都會清除；本金與配注方式會保留。"))return;window.HawkVisionAnalysisCore?.resetAnalysis?.();state.actualMode=state.selectedMode||"basic";state.modeNotice="";state.setupComplete=true;state.editAction=null;hideShell();showAnalysis();renderRuntime();await saveRuntime({});return}
   if(state.editAction==="bankroll"){const v=$("hvBankrollInput")?.value.trim();if(!v||Number(v)<=0){setErr("請輸入大於 0 的本金");return}state.bankrollBase=Number(v);state.currentBankroll=Number(v);state.profit=0;state.editAction=null;hideShell();showAnalysis();renderRuntime();await saveRuntime();return}
   if(state.step===0){if(state.selectedMode&&!isModeSelectable(state.selectedMode)){setErr("此模式正式畫面尚未接入");return}state.step=1;renderStep();return}
   if(state.step===1){const v=$("hvBankrollInput")?.value.trim();if(v){const n=Number(v);if(!Number.isFinite(n)||n<=0){setErr("本金必須大於 0");return}state.bankrollBase=n;state.currentBankroll=n;state.profit=0}else state.bankrollBase=state.currentBankroll=null;state.step=2;renderStep();return}
@@ -129,7 +148,7 @@ async function boot(){
   const {data:profile}=await client.from("profiles").select("must_change_password").eq("id",session.user.id).maybeSingle();
   if(profile?.must_change_password===true){renderPasswordClaim();return}
   state.deviceToken=token();await claimDevice();const entry=await rpc("hv_analysis_entry_v1",{p_device_token:state.deviceToken});state.role=entry?.business_role||"";state.isMember=state.role==="member";state.modes=state.isMember?(entry?.modes||{basic:true,counting:false,full:false}):{basic:true,counting:true,full:true};state.activeUntil=entry?.active_until||null;state.lastHoursGeneration=Number(entry?.hours_generation||0);state.lastPasswordGeneration=Number(entry?.password_generation||0);
-  const settings=entry?.settings||{};state.setupComplete=settings.setup_completed===true;state.selectedMode=settings.selected_mode||null;state.bankrollBase=settings.bankroll_base??null;state.currentBankroll=settings.current_bankroll??state.bankrollBase;state.profit=Number(settings.profit||0);state.betting=settings.betting??null;
+  const settings=entry?.settings||{};state.setupComplete=settings.setup_completed===true;state.selectedMode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.selectedMode||"basic";state.modeNotice=settings.mode_notice||"";state.bankrollBase=settings.bankroll_base??null;state.currentBankroll=settings.current_bankroll??state.bankrollBase;state.profit=Number(settings.profit||0);state.betting=settings.betting??null;
   const platformBtn=document.querySelector('[data-hv-fn="platforms"]');if(platformBtn)platformBtn.style.display=state.isMember?"none":"block";setupMenu();
   if(state.setupComplete&&(!state.isMember||calcRemaining()>0)){hideShell();showAnalysis();renderRuntime();if(entry?.analysis_state)window.HawkVisionAnalysisCore?.importState?.(entry.analysis_state)}else{state.step=0;state.editAction=null;renderStep()}
   updateTimeUI();tickTimer=setInterval(updateTimeUI,1000);pollTimer=setInterval(poll,POLL_MS);
