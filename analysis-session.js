@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.3.10";
+const VERSION="3.3.11";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -128,7 +128,7 @@ async function renderHoursStep(){
     body.querySelectorAll(".hv-hour-open").forEach(b=>b.onclick=()=>{
       body.querySelectorAll(".hv-hour-inline-slot").forEach(x=>x.innerHTML="");
       const h=Number(b.dataset.hour),max=Number(b.dataset.max),slot=b.closest(".hv-hour-row-wrap").querySelector(".hv-hour-inline-slot");
-      slot.innerHTML='<div class="hv-hour-inline-picker"><div class="hv-inline-stepper"><button type="button" data-step="minus">−</button><strong data-count>1</strong><button type="button" data-step="plus">＋</button></div><div class="hv-inline-actions"><button type="button" class="primary" data-confirm>開啟</button><button type="button" data-cancel><span style="white-space:nowrap;word-break:keep-all;writing-mode:horizontal-tb">取&nbsp;消</span></button></div></div>';
+      slot.innerHTML='<div class="hv-hour-inline-picker"><div class="hv-inline-stepper"><button type="button" data-step="minus">−</button><strong data-count>1</strong><button type="button" data-step="plus">＋</button></div><div class="hv-inline-actions"><button type="button" class="primary" data-confirm>開啟</button><button type="button" data-cancel>取消</button></div></div>';
       let count=1;const draw=()=>{slot.querySelector("[data-count]").textContent=count;slot.querySelector('[data-step="minus"]').disabled=count<=1;slot.querySelector('[data-step="plus"]').disabled=count>=max};draw();
       slot.querySelector('[data-step="minus"]').onclick=()=>{if(count>1){count--;draw()}};slot.querySelector('[data-step="plus"]').onclick=()=>{if(count<max){count++;draw()}};slot.querySelector('[data-cancel]').onclick=()=>slot.innerHTML="";
       slot.querySelector('[data-confirm]').onclick=async e=>{const btn=e.currentTarget;btn.disabled=true;setErr("");try{const r=await rpc("hv_analysis_activate_hour_packages_v2",{p_hours_per_package:h,p_package_count:count});state.activeUntil=r?.active_until||state.activeUntil;state.remaining=calcRemaining();updateTimeUI();await renderHoursStep();updateTimeUI()}catch(err){setErr(err.message||String(err));btn.disabled=false}};
@@ -175,7 +175,10 @@ async function submitPasswordClaim(){
   try{const res=await fetch(ADMIN_API+"/claim-password",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({new_password:p1})});const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok)throw new Error(d.error||"密碼設定失敗");sessionStorage.setItem("hv-force-login-message","密碼設定成功，請使用新密碼重新登入");await window.hvGlobalLogout?.()}catch(e){setErr(e.message||String(e));$("hvEntryNext").disabled=false}
 }
 
-async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){state.activeUntil=d?.active_until||null;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;showShell();hideAnalysis();state.step=3;state.editAction="hours";await renderHoursStep();setErr("所有時數已被清除，請聯繫上層")}updateTimeUI()}}catch(e){console.warn("analysis live status",e)}}
+async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){
+      if(d?.active_until) state.activeUntil=d.active_until;
+      if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;showShell();hideAnalysis();state.step=3;state.editAction="hours";await renderHoursStep();setErr("所有時數已被清除，請聯繫上層")}
+    }}catch(e){console.warn("analysis live status",e)}}
 async function boot(){
   hideAnalysis();
   const {data:{session}}=await client.auth.getSession();if(!session?.user)return;state.user=session.user;
@@ -190,8 +193,14 @@ async function boot(){
     window.HawkVisionAnalysisCore?.resetAnalysis?.();state.step=0;state.editAction=null;renderStep();saveRuntime({}).catch(()=>{});
   }else if(state.setupComplete&&calcRemaining()>0){hideShell();showAnalysis();renderRuntime();if(entry?.analysis_state)window.HawkVisionAnalysisCore?.importState?.(entry.analysis_state)}else{state.step=0;state.editAction=null;renderStep()}
   updateTimeUI();
-  if(tickTimer)clearInterval(tickTimer);
-  tickTimer=setInterval(updateTimeUI,200);
+  if(tickTimer)clearTimeout(tickTimer);
+  const scheduleClock=()=>{
+    updateTimeUI();
+    // 單一倒數顯示來源：依絕對結束時間重新計算，並貼齊下一個整秒邊界。
+    const delay=Math.max(80,1000-(Date.now()%1000)+20);
+    tickTimer=setTimeout(scheduleClock,delay);
+  };
+  scheduleClock();
   if(pollTimer)clearInterval(pollTimer);
   pollTimer=setInterval(poll,POLL_MS);
 }

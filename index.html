@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png?v=6">
   <link rel="shortcut icon" href="favicon.ico?v=6">
   <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=6">
-  <link rel="stylesheet" href="style.css?v=3.3.10">
+  <link rel="stylesheet" href="style.css?v=3.3.11">
 
 <style>
 #hvAuthCover{
@@ -47,9 +47,10 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
 .hv-hours-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.hv-hours-close{border:1px solid #65547f;background:#342a49;color:#fff;border-radius:9px;padding:7px 12px;font-weight:800;cursor:pointer}.hv-hour-row-wrap{margin-bottom:10px}.hv-hour-inline-picker{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 10px;margin-top:5px;border:1px solid rgba(117,99,161,.65);border-radius:10px;background:rgba(36,29,49,.72)}.hv-inline-stepper{display:flex;align-items:center;justify-content:center;gap:10px;margin-left:auto}.hv-inline-stepper button{width:34px;height:32px;border-radius:8px;border:1px solid #65547f;background:#342a49;color:#fff;font-size:19px;font-weight:900}.hv-inline-stepper strong{min-width:24px;text-align:center;font-size:18px}.hv-inline-actions{display:flex;flex-direction:row;align-items:center;gap:7px;margin-left:auto;flex:0 0 auto;white-space:nowrap}.hv-inline-actions button{display:inline-flex;align-items:center;justify-content:center;width:72px;min-width:72px;max-width:72px;white-space:nowrap;word-break:keep-all;flex:0 0 72px;border:1px solid #65547f;border-radius:8px;padding:7px 10px;color:#fff;background:#342a49;font-weight:800;line-height:1.2}.hv-inline-actions .primary{background:#6654a4}.hv-hours-used{margin-top:16px}
 </style>
 
-<style id="hv-v339-hour-action-fix">
+<style id="hv-v3311-hour-action-fix">
 .hv-inline-actions{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important;white-space:nowrap!important}
-.hv-inline-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:78px!important;min-width:78px!important;max-width:78px!important;height:42px!important;white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;writing-mode:horizontal-tb!important;flex:0 0 78px!important}
+.hv-inline-actions button{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:82px!important;min-width:82px!important;max-width:82px!important;height:40px!important;white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;writing-mode:horizontal-tb!important;flex:0 0 82px!important}
+.hv-inline-actions [data-cancel] span{display:inline!important;white-space:nowrap!important;word-break:keep-all!important;writing-mode:horizontal-tb!important}
 .hv-inline-actions [data-cancel]{white-space:nowrap!important;word-break:keep-all!important;writing-mode:horizontal-tb!important}
 </style>
 </head>
@@ -66,7 +67,7 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <span id="analysisIdentity" style="font-size:12px;opacity:.8">驗證登入中…</span>
-        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.3.10</span>
+        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.3.11</span>
         <button id="hvFunctionBtn" class="mode" type="button">功能使用</button>
         <div id="dbStatus" class="db-status waiting">資料庫尚未連線</div>
       </div>
@@ -216,10 +217,10 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="config.js?v=3.3.10"></script>
+  <script src="config.js?v=3.3.11"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.3.10"></script>
-  <script src="auth-gate.js?v=3.3.10"></script>
-  <script src="analysis-session.js?v=3.3.10"></script>
+  <script src="app.js?v=3.3.11"></script>
+  <script src="auth-gate.js?v=3.3.11"></script>
+  <script src="analysis-session.js?v=3.3.11"></script>
 </body>
 </html>
