@@ -220,7 +220,7 @@
     return {
       "Content-Type": "application/json",
       "apikey": cfg.SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${cfg.SUPABASE_ANON_KEY}`
+      "Authorization": `Bearer ${session.access_token}`
     };
   }
 

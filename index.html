@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png?v=6">
   <link rel="shortcut icon" href="favicon.ico?v=6">
   <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=6">
-  <link rel="stylesheet" href="style.css?v=3.3.5">
+  <link rel="stylesheet" href="style.css?v=3.3.6">
 
 <style>
 #hvAuthCover{
@@ -24,6 +24,8 @@
   font-weight:700;
 }
 body.hv-auth-ready #hvAuthCover{display:none}
+
+.hv-hours-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.hv-hours-close{border:1px solid #65547f;background:#342a49;color:#fff;border-radius:9px;padding:7px 12px;font-weight:800;cursor:pointer}.hv-hour-row-wrap{margin-bottom:10px}.hv-hour-inline-picker{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 10px;margin-top:5px;border:1px solid rgba(117,99,161,.65);border-radius:10px;background:rgba(36,29,49,.72)}.hv-inline-stepper{display:flex;align-items:center;justify-content:center;gap:10px;margin-left:auto}.hv-inline-stepper button{width:34px;height:32px;border-radius:8px;border:1px solid #65547f;background:#342a49;color:#fff;font-size:19px;font-weight:900}.hv-inline-stepper strong{min-width:24px;text-align:center;font-size:18px}.hv-inline-actions{display:flex;gap:7px;margin-left:auto}.hv-inline-actions button{border:1px solid #65547f;border-radius:8px;padding:7px 12px;color:#fff;background:#342a49;font-weight:800}.hv-inline-actions .primary{background:#6654a4}.hv-hours-used{margin-top:16px}
 </style>
 
 
@@ -41,6 +43,8 @@ body:not(.hv-analysis-visible) .analysis-main{visibility:hidden}
 body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locked .analysis-main select{pointer-events:none;opacity:.55}.hv-lock-banner{display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:84000;background:#3f2630;color:#ffd8df;border:1px solid #8d4c5d;border-radius:999px;padding:9px 14px;font-weight:800}.hv-lock-banner.show{display:block}
 .hv-time-panel{padding:12px;border:1px solid rgba(122,103,180,.55);background:rgba(76,60,112,.22);border-radius:14px;margin:10px 0 16px}.hv-time-caption{text-align:center;color:#cfc5df;font-weight:800;font-size:13px}.hv-hours-available,.hv-hours-used{border-radius:14px;padding:14px;margin-top:12px}.hv-hours-available{background:rgba(78,62,120,.28);border:1px solid rgba(137,113,210,.58)}.hv-hours-used{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.10);color:#bdb6c8}.hv-hour-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border-radius:12px;background:#342a49;border:1px solid #67558d}.hv-hour-card small{display:block;color:#d4c9e5;margin-top:4px}.hv-hour-open{border:0;border-radius:10px;padding:9px 16px;background:#755fc0;color:#fff;font-weight:900;cursor:pointer}.hv-hour-picker{margin-top:14px;padding:16px;border-radius:14px;border:1px solid #7563a1;background:#241d31;text-align:center}.hv-picker-note{color:#bfb5cc;margin-top:4px}.hv-stepper{display:flex;justify-content:center;align-items:center;gap:18px;margin:16px 0}.hv-stepper button{width:46px;height:42px;border-radius:10px;border:1px solid #65547f;background:#342a49;color:#fff;font-size:24px;font-weight:900}.hv-stepper button:disabled{opacity:.35}.hv-stepper strong{min-width:54px;font-size:24px}.hv-picker-total{margin-bottom:14px}.hv-picker-actions{display:flex;justify-content:center;gap:10px}.hv-picker-actions button{border:1px solid #65547f;border-radius:10px;padding:9px 16px;color:#fff;background:#342a49;font-weight:800}.hv-picker-actions .primary{background:#6654a4}
 @media(max-width:700px){.hv-entry-card{padding:16px}.hv-time-big{font-size:30px}.hv-function-popover{top:58px;right:10px}.hv-runtime-chip{font-size:11px}}
+
+.hv-hours-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.hv-hours-close{border:1px solid #65547f;background:#342a49;color:#fff;border-radius:9px;padding:7px 12px;font-weight:800;cursor:pointer}.hv-hour-row-wrap{margin-bottom:10px}.hv-hour-inline-picker{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 10px;margin-top:5px;border:1px solid rgba(117,99,161,.65);border-radius:10px;background:rgba(36,29,49,.72)}.hv-inline-stepper{display:flex;align-items:center;justify-content:center;gap:10px;margin-left:auto}.hv-inline-stepper button{width:34px;height:32px;border-radius:8px;border:1px solid #65547f;background:#342a49;color:#fff;font-size:19px;font-weight:900}.hv-inline-stepper strong{min-width:24px;text-align:center;font-size:18px}.hv-inline-actions{display:flex;gap:7px;margin-left:auto}.hv-inline-actions button{border:1px solid #65547f;border-radius:8px;padding:7px 12px;color:#fff;background:#342a49;font-weight:800}.hv-inline-actions .primary{background:#6654a4}.hv-hours-used{margin-top:16px}
 </style>
 </head>
 <body><div id="hvAuthCover"><div class="hv-auth-card">正在載入 HawkVision…</div></div>
@@ -206,10 +210,10 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="config.js?v=3.3.5"></script>
+  <script src="config.js?v=3.3.6"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.3.5"></script>
-  <script src="auth-gate.js?v=3.3.5"></script>
-  <script src="analysis-session.js?v=3.3.5"></script>
+  <script src="app.js?v=3.3.6"></script>
+  <script src="auth-gate.js?v=3.3.6"></script>
+  <script src="analysis-session.js?v=3.3.6"></script>
 </body>
 </html>
