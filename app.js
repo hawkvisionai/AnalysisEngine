@@ -193,7 +193,21 @@
     return window.hvAnalysisAuthClient;
   }
 
+  async function waitForAnalysisAuthReady(timeoutMs = 12000) {
+    const startedAt = Date.now();
+
+    while (!document.body.classList.contains("hv-auth-ready")) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw new Error("分析引擎登入初始化逾時，請重新整理頁面");
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
   async function currentAnalysisAuthHeaders() {
+    // 等 auth-gate 完成 SSO/session/權限驗證後才檢查資料庫，
+    // 避免管理層首次登入時因初始化時序誤判成資料庫連線失敗。
+    await waitForAnalysisAuthReady();
     const authClient = await waitForAnalysisAuthClient();
 
     const { data: { session }, error: sessionError } = await authClient.auth.getSession();
