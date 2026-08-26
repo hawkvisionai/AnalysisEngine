@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.3.3";
+const VERSION="3.3.4";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -23,7 +23,7 @@ async function rpc(name,args={}){const {data,error}=await client.rpc(name,args);
 function calcRemaining(){if(!state.isMember)return 0;if(!state.activeUntil)return 0;return Math.max(0,Math.floor((new Date(state.activeUntil).getTime()-Date.now())/1000))}
 function updateTimeUI(){
   if(!state.isMember){$("hvMemberTimeBlock")?.classList.remove("show");if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="none";applyTimeLock();return}
-  state.remaining=calcRemaining();const t=fmtSec(state.remaining);
+  state.remaining=calcRemaining();const t=fmtSec(state.remaining);const live=$("hvHoursLiveTime");if(live)live.textContent=t;
   $("hvMemberTimeBlock")?.classList.add("show");if($("hvRemainingTimeTop"))$("hvRemainingTimeTop").textContent=t;
   if($("hvMenuRemainingTime")){ $("hvMenuRemainingTime").style.display="block"; $("hvMenuRemainingTime").textContent=`剩餘時間 ${t}`; }
   applyTimeLock();
@@ -32,8 +32,8 @@ function applyTimeLock(){const locked=state.isMember&&state.setupComplete&&state
 function modeName(k){return k==="counting"?"算牌模式":k==="full"?"完整模式":"基礎模式"}
 function renderModeStatus(){
   const el=$("hvModeStatus");if(!el)return;
-  // 跳過模式時依規格不顯示目前模式。
-  if(!state.selectedMode){el.style.display="none";el.textContent="";return}
+  // 未指定模式時，系統默認基礎模式並照常顯示狀態。
+  if(!state.selectedMode){state.actualMode="basic"}
   const actual=state.actualMode||state.selectedMode||"basic";
   let text=modeName(actual),warn=false;
   if(state.modeNotice){text=state.modeNotice;warn=true}
@@ -66,7 +66,7 @@ function renderStep(){
   showShell();hideAnalysis();setErr("");prepareEntryButtons();
   const title=$("hvEntryTitle"),hint=$("hvEntryHint"),body=$("hvEntryBody"),back=$("hvEntryBack"),skip=$("hvEntrySkip"),next=$("hvEntryNext");
   if(state.step===0){
-    title.textContent="分析模式選擇";hint.textContent="依上層開放的模式選擇本次分析方式；也可以跳過，跳過後系統以基礎分析運作，但不顯示目前模式。";
+    title.textContent="分析模式選擇";hint.textContent="依上層開放的模式選擇本次分析方式；也可以跳過，跳過後系統默認使用基礎模式，正式畫面仍會顯示「基礎模式」。";
     const defs=[["basic","基礎模式","依最近牌局結果進行基礎分析"],["counting","算牌模式","權限已預留；正式算牌畫面完成後啟用"],["full","完整模式","權限已預留；完整分析規則完成後啟用"]];
     body.innerHTML=`<div class="hv-mode-list">${defs.map(([k,n,d])=>{const granted=state.modes[k]===true,ready=k==="basic",disabled=!granted||!ready;const msg=!granted?"上層尚未開放":d;return `<button class="hv-mode-option ${state.selectedMode===k?"selected":""}" data-mode="${k}" ${disabled?"disabled":""} type="button"><strong>${n}</strong><small>${msg}</small></button>`}).join("")}</div>`;
     body.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{state.selectedMode=b.dataset.mode;renderStep()});
@@ -97,8 +97,8 @@ async function renderHoursStep(){
     const d=await loadHours();state.remaining=calcRemaining();
     const avail=state.hourInventory.filter(x=>Number(x.available_count)>0);
     const used=state.hourHistory.filter(x=>Number(x.used_count)>0);
-    body.innerHTML=`<div class="hv-time-big">${fmtSec(state.remaining)}</div><h3>可使用時數包</h3>${avail.length?`<div class="hv-hour-list">${avail.map(x=>`<button class="hv-hour-option" data-hour="${Number(x.hours_per_package)}" type="button"><strong>${Number(x.hours_per_package)} 小時</strong><small>可使用 ${Number(x.available_count)} 包</small></button>`).join("")}</div>`:'<div class="hv-empty">目前沒有可使用時數包<br>請跟上層索取時數包</div>'}<h3 style="margin-top:18px">已使用紀錄</h3><div class="hv-history-row"><span>累計使用總時間</span><strong>${Number(d?.total_activated_hours||0)} 小時</strong></div><div class="hv-used-scroll">${used.length?used.map(x=>`<div class="hv-history-row"><span>${Number(x.hours_per_package)} 小時時數包</span><strong>${Number(x.used_count)} 包</strong></div>`).join(""):'<div class="hv-empty">尚無使用紀錄</div>'}</div>`;
-    body.querySelectorAll("[data-hour]").forEach(b=>b.onclick=async()=>{b.disabled=true;setErr("");try{const r=await rpc("hv_analysis_activate_hour_package_v1",{p_hours_per_package:Number(b.dataset.hour)});state.activeUntil=r?.active_until||state.activeUntil;await renderHoursStep();updateTimeUI()}catch(e){setErr(e.message||String(e));b.disabled=false}});
+    body.innerHTML=`<div class="hv-time-panel"><div class="hv-time-caption">目前剩餘時間</div><div id="hvHoursLiveTime" class="hv-time-big">${fmtSec(state.remaining)}</div></div><section class="hv-hours-available"><h3>可使用時數包</h3>${avail.length?`<div class="hv-hour-list">${avail.map(x=>`<div class="hv-hour-card"><div><strong>${Number(x.hours_per_package)} 小時</strong><small>可使用 ${Number(x.available_count)} 包</small></div><button class="hv-hour-open" data-hour="${Number(x.hours_per_package)}" data-max="${Number(x.available_count)}" type="button">開啟</button></div>`).join("")}</div>`:'<div class="hv-empty">目前沒有可使用時數包<br>請跟上層索取時數包</div>'}</section><section class="hv-hours-used"><h3>已使用時數包</h3><div class="hv-history-row"><span>累計使用總時間</span><strong>${Number(d?.total_activated_hours||0)} 小時</strong></div><div class="hv-used-scroll">${used.length?used.map(x=>`<div class="hv-history-row"><span>${Number(x.hours_per_package)} 小時時數包</span><strong>${Number(x.used_count)} 包</strong></div>`).join(""):'<div class="hv-empty">尚無使用紀錄</div>'}</div></section><div id="hvHourPicker"></div>`;
+    body.querySelectorAll(".hv-hour-open").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.hour),max=Number(b.dataset.max);const picker=$("hvHourPicker");picker.innerHTML=`<div class="hv-hour-picker"><strong>開啟 ${h} 小時時數包</strong><div class="hv-picker-note">可使用 ${max} 包</div><div class="hv-stepper"><button type="button" data-step="minus">−</button><strong data-count>1</strong><button type="button" data-step="plus">＋</button></div><div class="hv-picker-total">本次增加：<strong data-total>${h} 小時</strong></div><div class="hv-picker-actions"><button type="button" class="ghost" data-cancel>取消</button><button type="button" class="primary" data-confirm>確認開啟</button></div></div>`;let count=1;const draw=()=>{picker.querySelector("[data-count]").textContent=count;picker.querySelector("[data-total]").textContent=`${h*count} 小時`;picker.querySelector('[data-step="minus"]').disabled=count<=1;picker.querySelector('[data-step="plus"]').disabled=count>=max};draw();picker.querySelector('[data-step="minus"]').onclick=()=>{if(count>1){count--;draw()}};picker.querySelector('[data-step="plus"]').onclick=()=>{if(count<max){count++;draw()}};picker.querySelector('[data-cancel]').onclick=()=>picker.innerHTML="";picker.querySelector('[data-confirm]').onclick=async e=>{const btn=e.currentTarget;btn.disabled=true;setErr("");try{const r=await rpc("hv_analysis_activate_hour_packages_v2",{p_hours_per_package:h,p_package_count:count});state.activeUntil=r?.active_until||state.activeUntil;await renderHoursStep();updateTimeUI()}catch(err){setErr(err.message||String(err));btn.disabled=false}}});
   }catch(e){body.innerHTML='<div class="hv-empty">時數包讀取失敗</div>';setErr(e.message||String(e))}
 }
 
@@ -114,7 +114,7 @@ async function next(){
 function skip(){
   if(state.passwordClaim)return;
   if(state.editAction){hideShell();showAnalysis();state.editAction=null;return}
-  if(state.step===0){state.selectedMode=null;state.step=1;renderStep();return}
+  if(state.step===0){state.selectedMode="basic";state.actualMode="basic";state.modeNotice="";state.step=1;renderStep();return}
   if(state.step===1){state.bankrollBase=state.currentBankroll=null;state.profit=0;state.step=2;renderStep();return}
   if(state.step===2){state.betting=null;if(state.isMember){state.step=3;renderStep()}else finishSetup();return}
   if(state.step===3){finishSetup()}
