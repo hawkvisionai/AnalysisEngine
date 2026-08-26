@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.3.8";
+const VERSION="3.3.10";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -20,12 +20,38 @@ function showAnalysis(){document.body.classList.add("hv-analysis-visible")}
 function hideAnalysis(){document.body.classList.remove("hv-analysis-visible")}
 function setErr(m=""){if($("hvEntryError"))$("hvEntryError").textContent=m}
 async function rpc(name,args={}){const {data,error}=await client.rpc(name,args);if(error)throw error;return data}
-function calcRemaining(){if(!state.isMember)return 0;if(!state.activeUntil)return 0;return Math.max(0,Math.floor((new Date(state.activeUntil).getTime()-Date.now())/1000))}
+function calcRemaining(){
+  if(!state.isMember)return 0;
+  if(!state.activeUntil)return 0;
+  const ms=new Date(state.activeUntil).getTime()-Date.now();
+  return Math.max(0,Math.ceil(ms/1000));
+}
+let lastRenderedSecond=null;
+function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
 function updateTimeUI(){
-  if(!state.isMember){$("hvMemberTimeBlock")?.classList.remove("show");if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="none";applyTimeLock();return}
-  state.remaining=calcRemaining();const t=fmtSec(state.remaining);const live=$("hvHoursLiveTime");if(live)live.textContent=t;
-  $("hvMemberTimeBlock")?.classList.add("show");if($("hvRemainingTimeTop"))$("hvRemainingTimeTop").textContent=t;
-  if($("hvMenuRemainingTime")){ $("hvMenuRemainingTime").style.display="block"; $("hvMenuRemainingTime").textContent=`剩餘時間 ${t}`; }
+  if(!state.isMember){
+    $("hvMemberTimeBlock")?.classList.remove("show");
+    if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="none";
+    lastRenderedSecond=null;
+    applyTimeLock();
+    return;
+  }
+  const sec=calcRemaining();
+  state.remaining=sec;
+  if(sec!==lastRenderedSecond){
+    lastRenderedSecond=sec;
+    const t=fmtSec(sec);
+    setTextIfChanged($("hvHoursLiveTime"),t);
+    $("hvMemberTimeBlock")?.classList.add("show");
+    setTextIfChanged($("hvRemainingTimeTop"),t);
+    if($("hvMenuRemainingTime")){
+      $("hvMenuRemainingTime").style.display="block";
+      setTextIfChanged($("hvMenuRemainingTime"),`剩餘時間 ${t}`);
+    }
+  }else{
+    $("hvMemberTimeBlock")?.classList.add("show");
+    if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="block";
+  }
   applyTimeLock();
 }
 function applyTimeLock(){const locked=state.isMember&&state.setupComplete&&state.remaining<=0;document.body.classList.toggle("hv-time-locked",locked);$("hvLockBanner")?.classList.toggle("show",locked);document.querySelectorAll('#hvFunctionPopover [data-hv-fn]').forEach(b=>{const fn=b.dataset.hvFn;b.disabled=locked&&!["hours","logout"].includes(fn)});}
@@ -102,7 +128,7 @@ async function renderHoursStep(){
     body.querySelectorAll(".hv-hour-open").forEach(b=>b.onclick=()=>{
       body.querySelectorAll(".hv-hour-inline-slot").forEach(x=>x.innerHTML="");
       const h=Number(b.dataset.hour),max=Number(b.dataset.max),slot=b.closest(".hv-hour-row-wrap").querySelector(".hv-hour-inline-slot");
-      slot.innerHTML='<div class="hv-hour-inline-picker"><div class="hv-inline-stepper"><button type="button" data-step="minus">−</button><strong data-count>1</strong><button type="button" data-step="plus">＋</button></div><div class="hv-inline-actions"><button type="button" class="primary" data-confirm>開啟</button><button type="button" data-cancel>取消</button></div></div>';
+      slot.innerHTML='<div class="hv-hour-inline-picker"><div class="hv-inline-stepper"><button type="button" data-step="minus">−</button><strong data-count>1</strong><button type="button" data-step="plus">＋</button></div><div class="hv-inline-actions"><button type="button" class="primary" data-confirm>開啟</button><button type="button" data-cancel><span style="white-space:nowrap;word-break:keep-all;writing-mode:horizontal-tb">取&nbsp;消</span></button></div></div>';
       let count=1;const draw=()=>{slot.querySelector("[data-count]").textContent=count;slot.querySelector('[data-step="minus"]').disabled=count<=1;slot.querySelector('[data-step="plus"]').disabled=count>=max};draw();
       slot.querySelector('[data-step="minus"]').onclick=()=>{if(count>1){count--;draw()}};slot.querySelector('[data-step="plus"]').onclick=()=>{if(count<max){count++;draw()}};slot.querySelector('[data-cancel]').onclick=()=>slot.innerHTML="";
       slot.querySelector('[data-confirm]').onclick=async e=>{const btn=e.currentTarget;btn.disabled=true;setErr("");try{const r=await rpc("hv_analysis_activate_hour_packages_v2",{p_hours_per_package:h,p_package_count:count});state.activeUntil=r?.active_until||state.activeUntil;state.remaining=calcRemaining();updateTimeUI();await renderHoursStep();updateTimeUI()}catch(err){setErr(err.message||String(err));btn.disabled=false}};
@@ -163,7 +189,11 @@ async function boot(){
     state.setupComplete=false;state.selectedMode=null;state.actualMode="basic";state.modeNotice="";state.bankrollBase=null;state.currentBankroll=null;state.profit=0;state.betting=null;
     window.HawkVisionAnalysisCore?.resetAnalysis?.();state.step=0;state.editAction=null;renderStep();saveRuntime({}).catch(()=>{});
   }else if(state.setupComplete&&calcRemaining()>0){hideShell();showAnalysis();renderRuntime();if(entry?.analysis_state)window.HawkVisionAnalysisCore?.importState?.(entry.analysis_state)}else{state.step=0;state.editAction=null;renderStep()}
-  updateTimeUI();tickTimer=setInterval(updateTimeUI,1000);pollTimer=setInterval(poll,POLL_MS);
+  updateTimeUI();
+  if(tickTimer)clearInterval(tickTimer);
+  tickTimer=setInterval(updateTimeUI,200);
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=setInterval(poll,POLL_MS);
 }
 $("hvEntryNext")?.addEventListener("click",next);$("hvEntrySkip")?.addEventListener("click",skip);$("hvEntryBack")?.addEventListener("click",back);
 const wait=setInterval(()=>{if(document.body.classList.contains("hv-auth-ready")){clearInterval(wait);boot().catch(e=>{console.error(e);showShell();hideAnalysis();setErr("分析入口初始化失敗："+(e.message||e))})}},50);
