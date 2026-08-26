@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.3.1";
+const VERSION="3.3.2";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -111,7 +111,8 @@ async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_to
 function renderPasswordClaim(){
   state.passwordClaim=true;showShell();hideAnalysis();setErr("");
   $("hvEntryTitle").textContent="首次登入｜設定新密碼";$("hvEntryHint").textContent="第一次登入必須先設定自己的新密碼；設定成功後系統會登出，請使用新密碼重新登入。";
-  $("hvEntryBody").innerHTML='<div class="hv-field"><label>新密碼</label><input id="hvNewPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"></div><div class="hv-field"><label>再次輸入新密碼</label><input id="hvNewPassword2" type="password" autocomplete="new-password" placeholder="再次輸入新密碼"></div>';
+  $("hvEntryBody").innerHTML='<div class="hv-field"><label>新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword">顯示</button></div></div><div class="hv-field"><label>再次輸入新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword2" type="password" autocomplete="new-password" placeholder="再次輸入新密碼"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword2">顯示</button></div></div>';
+  $("hvEntryBody").querySelectorAll("[data-password-target]").forEach(btn=>btn.addEventListener("click",()=>{const input=$(btn.dataset.passwordTarget);if(!input)return;const showing=input.type==="text";input.type=showing?"password":"text";btn.textContent=showing?"顯示":"隱藏";}));
   $("hvEntryBack").style.display="none";$("hvEntrySkip").style.display="none";$("hvEntryNext").style.display="inline-block";$("hvEntryNext").textContent="設定新密碼並重新登入";
 }
 async function submitPasswordClaim(){

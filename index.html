@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png?v=6">
   <link rel="shortcut icon" href="favicon.ico?v=6">
   <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=6">
-  <link rel="stylesheet" href="style.css?v=3.3.1">
+  <link rel="stylesheet" href="style.css?v=3.3.2">
 
 <style>
 #hvAuthCover{
@@ -31,7 +31,7 @@ body.hv-auth-ready #hvAuthCover{display:none}
 #hvEntryShell{position:fixed;inset:0;z-index:90000;background:#151321;color:#eee8f5;display:none;align-items:center;justify-content:center;padding:18px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 #hvEntryShell.show{display:flex}.hv-entry-card{width:min(560px,100%);max-height:92vh;overflow:auto;background:#211c2d;border:1px solid #493f5b;border-radius:18px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
 .hv-entry-card h2{margin:0 0 8px;font-size:24px}.hv-entry-card p{color:#bdb3c9;line-height:1.6}.hv-entry-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}.hv-entry-actions button,.hv-mode-option,.hv-hour-option{border:1px solid #5a4e70;background:#30283f;color:#fff;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.hv-entry-actions .primary,.hv-mode-option.selected,.hv-hour-option:hover{background:#6654a4}.hv-entry-actions .ghost{background:transparent}
-.hv-mode-list,.hv-hour-list{display:grid;gap:10px;margin-top:14px}.hv-mode-option,.hv-hour-option{text-align:left}.hv-mode-option small,.hv-hour-option small{display:block;color:#c8bfd3;margin-top:4px;font-weight:500}.hv-mode-option:disabled{opacity:.45;cursor:not-allowed}.hv-field{margin-top:14px}.hv-field label{display:block;font-weight:800;margin-bottom:6px}.hv-field input{width:100%;background:#181420;border:1px solid #5a4e70;color:#fff;border-radius:10px;padding:12px;font:inherit}.hv-time-big{font-size:36px;font-weight:900;text-align:center;margin:14px 0}.hv-empty{padding:18px;border:1px dashed #5a4e70;border-radius:12px;text-align:center;color:#c8bfd3}.hv-used-scroll{max-height:180px;overflow:auto;margin-top:12px}.hv-history-row{display:flex;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #342d42}.hv-setup-error{margin-top:12px;color:#ffaaa7;font-weight:700}
+.hv-mode-list,.hv-hour-list{display:grid;gap:10px;margin-top:14px}.hv-mode-option,.hv-hour-option{text-align:left}.hv-mode-option small,.hv-hour-option small{display:block;color:#c8bfd3;margin-top:4px;font-weight:500}.hv-mode-option:disabled{opacity:.45;cursor:not-allowed}.hv-field{margin-top:14px}.hv-field label{display:block;font-weight:800;margin-bottom:6px}.hv-field input{width:100%;background:#181420;border:1px solid #5a4e70;color:#fff;border-radius:10px;padding:12px;font:inherit}.hv-password-wrap{position:relative}.hv-password-wrap input{padding-right:74px}.hv-password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#d8cfea;font-weight:800;cursor:pointer;padding:7px 8px;border-radius:8px}.hv-password-toggle:hover{background:rgba(255,255,255,.08)}.hv-time-big{font-size:36px;font-weight:900;text-align:center;margin:14px 0}.hv-empty{padding:18px;border:1px dashed #5a4e70;border-radius:12px;text-align:center;color:#c8bfd3}.hv-used-scroll{max-height:180px;overflow:auto;margin-top:12px}.hv-history-row{display:flex;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #342d42}.hv-setup-error{margin-top:12px;color:#ffaaa7;font-weight:700}
 #hvFunctionBtn{margin-left:0}.hv-function-popover{position:fixed;right:16px;top:64px;z-index:85000;width:min(330px,calc(100vw - 32px));background:#211c2d;border:1px solid #493f5b;border-radius:16px;padding:14px;box-shadow:0 18px 60px rgba(0,0,0,.45);display:none}.hv-function-popover.show{display:block}.hv-function-popover .hv-menu-time{font-size:24px;font-weight:900;text-align:center;margin-bottom:10px}.hv-function-popover button{width:100%;margin-top:7px;border:1px solid #5a4e70;background:#30283f;color:white;border-radius:10px;padding:10px;font-weight:800}.hv-function-popover button.danger{background:#722e3a}
 #hvRuntimeBar{display:none}.hv-runtime-chip{padding:6px 9px;border-radius:999px;background:#30283f;font-size:12px;font-weight:800}
 #hvMemberTimeBlock{display:none;align-items:center;gap:7px;margin-left:18px;padding:8px 12px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(39,31,54,.78)}
@@ -55,7 +55,7 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <span id="analysisIdentity" style="font-size:12px;opacity:.8">驗證登入中…</span>
-        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.3.1</span>
+        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.3.2</span>
         <button id="hvFunctionBtn" class="mode" type="button">功能使用</button>
         <div id="dbStatus" class="db-status waiting">資料庫尚未連線</div>
       </div>
@@ -208,10 +208,10 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="config.js?v=3.3.1"></script>
+  <script src="config.js?v=3.3.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.3.1"></script>
-  <script src="auth-gate.js?v=3.3.1"></script>
-  <script src="analysis-session.js?v=3.3.1"></script>
+  <script src="app.js?v=3.3.2"></script>
+  <script src="auth-gate.js?v=3.3.2"></script>
+  <script src="analysis-session.js?v=3.3.2"></script>
 </body>
 </html>
