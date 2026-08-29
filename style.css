@@ -1048,3 +1048,71 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
   body.hv-analysis-visible .bead-cell{box-sizing:border-box!important;min-width:0!important;min-height:0!important;width:auto!important;height:auto!important;overflow:hidden!important}
   body.hv-analysis-visible .bead{width:72%!important;max-width:28px!important;min-width:0!important;font-size:clamp(9px,3vw,13px)!important}
 }
+
+/* ===== v3.4.4 road review + mobile setup refinements ===== */
+.hv-road-toggle-mobile{display:none!important}
+.hv-mobile-total{display:none}
+
+/* Desktop road review mode: keep the approved analysis layout when road is closed. */
+@media(min-width:901px){
+  body.hv-analysis-visible .hv-analysis-start-row{grid-template-columns:minmax(190px,.72fr) 145px 145px 160px!important;justify-content:start!important}
+  body.hv-analysis-visible .hv-required-games{padding:0 12px!important}
+  body.hv-analysis-visible .hv-road-toggle-desktop{display:flex!important;align-items:center!important;justify-content:center!important;min-height:48px!important;font-weight:900!important;white-space:nowrap!important}
+  body.hv-analysis-visible.hv-road-closed .bead-card{display:none!important}
+  body.hv-analysis-visible.hv-road-open .top-grid{grid-template-columns:1fr!important}
+  body.hv-analysis-visible.hv-road-open .result-card{display:none!important}
+  body.hv-analysis-visible.hv-road-open .control-card{width:100%!important;max-width:none!important}
+  body.hv-analysis-visible.hv-road-open .bead-card{display:block!important;margin-top:16px!important}
+}
+
+/* Mobile: road is inserted between INPUT and RESULT without changing the desktop composition. */
+@media(max-width:900px){
+  body.hv-analysis-visible .hv-road-toggle-desktop{display:none!important}
+  body.hv-analysis-visible .hv-road-toggle-mobile{display:flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;font-weight:900!important}
+  body.hv-analysis-visible .round-count{display:none!important}
+  body.hv-analysis-visible .hv-mobile-total{display:inline!important;margin-left:10px;padding-left:10px;border-left:1px solid rgba(255,255,255,.16);font-size:.92em;color:#bdb5c8}
+  body.hv-analysis-visible .tool-row{grid-template-columns:1fr 1fr 1fr!important}
+  body.hv-analysis-visible .top-grid{display:contents!important}
+  body.hv-analysis-visible .control-card{order:1!important}
+  body.hv-analysis-visible .bead-card{order:2!important}
+  body.hv-analysis-visible .result-card{order:3!important}
+  body.hv-analysis-visible .app-shell{display:flex!important;flex-direction:column!important}
+  body.hv-analysis-visible .brand-bar{order:0!important}
+  body.hv-analysis-visible.hv-road-closed .bead-card{display:none!important}
+  body.hv-analysis-visible.hv-road-open .bead-card{display:block!important}
+}
+
+/* Mobile setup is a fixed one-screen control panel; only truly tiny screens get an internal fallback. */
+@media(max-width:760px){
+  body.hv-setup-visible{overflow:hidden!important}
+  #hvEntryShell{align-items:center!important;overflow:hidden!important;padding:8px!important;height:100dvh!important;box-sizing:border-box!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){width:100%!important;height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important;overflow:hidden!important;padding:10px!important;box-sizing:border-box!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) #hvEntryTitle{min-height:52px!important;margin:0 0 4px!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-brand-lockup img{width:42px!important;height:42px!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-brand-copy b{font-size:19px!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-brand-copy small{font-size:6.5px!important;margin-top:4px!important}
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-top-close{padding:8px 11px!important;font-size:14px!important}
+  #hvEntryShell .hv-fixed-setup{height:calc(100% - 58px)!important;max-height:none!important;min-height:0!important;grid-template-rows:1.05fr .78fr 1.12fr .38fr 92px!important;gap:6px!important;margin-top:0!important}
+  #hvEntryShell .hv-fixed-setup .hv-setup-section{padding:8px 10px!important;border-radius:11px!important}
+  #hvEntryShell .hv-fixed-setup .hv-setup-section h3{font-size:13px!important;margin-bottom:5px!important}
+  #hvEntryShell .hv-fixed-setup .hv-choice-grid{grid-template-columns:1fr!important;gap:5px!important}
+  #hvEntryShell .hv-fixed-setup .hv-choice-grid.two{grid-template-columns:1fr 1fr!important}
+  #hvEntryShell .hv-fixed-setup .hv-choice{min-height:34px!important;padding:5px 8px!important;font-size:13px!important;border-radius:9px!important}
+  #hvEntryShell .hv-warning-slot{padding:4px 8px!important}
+  #hvEntryShell .hv-warning-copy strong{font-size:13px!important;margin-bottom:2px!important}
+  #hvEntryShell .hv-warning-copy p{font-size:10px!important;line-height:1.15!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)!important;grid-template-rows:52px 34px!important;gap:6px!important;min-height:92px!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-cell{min-width:0!important;min-height:52px!important;height:52px!important;padding:5px 8px!important;border-radius:10px!important;overflow:hidden!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-cell label{font-size:9px!important;margin-bottom:2px!important;white-space:nowrap!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-amount{grid-column:1!important;grid-row:1!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-units{grid-column:2!important;grid-row:1!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-commission{display:none!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-enter{grid-column:1/-1!important;grid-row:2!important;width:100%!important;min-height:34px!important;height:34px!important;padding:4px 10px!important;font-size:14px!important;writing-mode:horizontal-tb!important;white-space:nowrap!important;word-break:keep-all!important}
+  #hvPointsInput{width:100%!important;min-width:0!important;padding:4px 5px!important;font-size:clamp(14px,4.2vw,18px)!important;line-height:1.05!important;letter-spacing:-.02em!important}
+  #hvEntryShell .hv-units-split{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:5px!important;align-items:end!important}
+  #hvEntryShell .hv-final-units strong{font-size:16px!important;white-space:nowrap!important}
+  #hvEntryShell .hv-one-bet{font-size:clamp(10px,2.8vw,13px)!important;overflow:hidden!important;text-overflow:ellipsis!important;text-align:right!important}
+}
+@media(max-width:760px) and (max-height:680px){
+  #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){overflow:auto!important}
+}

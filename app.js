@@ -186,9 +186,9 @@
 
   function showCorePausedState() {
     els.decisionCard.className = "decision waiting-state";
-    els.decision.textContent = "暫停分析";
+    els.decision.textContent = "等待有效訊號";
     els.decisionPercent.textContent = "";
-    els.confidence.textContent = "等待恢復";
+    els.confidence.textContent = "請繼續輸入牌局";
     els.confidence.classList.add("is-waiting");
     els.warning.classList.add("hidden");
   }
