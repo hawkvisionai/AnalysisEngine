@@ -1198,3 +1198,126 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
 @media screen and (max-width:760px) and (max-height:680px){
   body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){overflow:hidden!important}
 }
+
+/* ===== v3.4.6 setup fit + toolbar polish ===== */
+/* Primary purple treatment requested for Function and setup Close buttons. */
+#hvFunctionBtn,
+#hvEntryShell .hv-top-close{
+  background:linear-gradient(180deg,#7c5ce8 0%,#6846cf 100%)!important;
+  border-color:rgba(184,159,255,.78)!important;
+  color:#fff!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)!important;
+}
+
+/* Desktop analysis row: keep requested 2:3:3:2 proportions, but never clip the required-games text. */
+@media screen and (min-width:901px){
+  body.hv-analysis-visible .hv-analysis-start-row{grid-template-columns:2fr 3fr 3fr 2fr!important}
+  body.hv-analysis-visible .hv-required-games{
+    min-width:0!important;
+    width:100%!important;
+    padding:0 4px!important;
+    font-size:clamp(11px,.82vw,14px)!important;
+    letter-spacing:-.02em!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* Phone setup only. Keep Hours and Analysis workspace untouched. */
+@media screen and (max-width:760px){
+  body.hv-setup-visible{
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+    touch-action:manipulation!important;
+  }
+  body.hv-setup-visible #hvEntryShell{
+    overflow:hidden!important;
+    overscroll-behavior:none!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){
+    overflow:hidden!important;
+    max-height:calc(100dvh - 10px)!important;
+    height:calc(100dvh - 10px)!important;
+    padding:7px 9px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) #hvEntryTitle{
+    min-height:45px!important;
+    margin:0 0 2px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-brand-lockup img{width:39px!important;height:39px!important}
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-brand-copy b{font-size:18px!important}
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) .hv-top-close{padding:7px 10px!important;font-size:13px!important}
+
+  /* Explicit rows remove the dead vertical space from sections 1 and 2. */
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{
+    height:calc(100% - 47px)!important;
+    max-height:none!important;
+    min-height:0!important;
+    display:grid!important;
+    grid-template-rows:180px 96px 176px minmax(82px,1fr) 136px!important;
+    gap:5px!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section{
+    padding:6px 8px!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section h3{
+    font-size:12px!important;
+    margin:0 0 4px!important;
+    line-height:1.1!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice-grid{gap:4px!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:30px!important;padding:4px 7px!important;font-size:13px!important;line-height:1.05!important}
+
+  /* Warning remains readable, using the reclaimed vertical space. */
+  body.hv-setup-visible #hvEntryShell .hv-warning-slot{padding:7px 10px!important}
+  body.hv-setup-visible #hvEntryShell .hv-warning-copy strong{font-size:14px!important;line-height:1.15!important;margin-bottom:4px!important}
+  body.hv-setup-visible #hvEntryShell .hv-warning-copy p{font-size:11.5px!important;line-height:1.24!important;margin:0!important}
+
+  /* Suggested units -> bankroll -> enter, all full width. */
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-row,
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-row.basic-mode{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:42px 48px 36px!important;
+    gap:5px!important;
+    min-height:0!important;
+    height:136px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-cell{padding:4px 8px!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-cell label{font-size:9.5px!important;margin-bottom:1px!important}
+  body.hv-setup-visible #hvEntryShell .hv-units-split{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    width:100%!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-final-units strong{font-size:16px!important;white-space:nowrap!important}
+  body.hv-setup-visible #hvEntryShell .hv-one-bet{
+    margin-left:auto!important;
+    text-align:right!important;
+    font-size:14px!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+  }
+  body.hv-setup-visible #hvPointsInput{height:27px!important;font-size:17px!important;padding:2px 7px!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-enter{height:36px!important;min-height:36px!important;font-size:14px!important}
+}
+
+/* Even on short iPhones, analysis setup itself must not become a scroll container. */
+@media screen and (max-width:760px) and (max-height:720px){
+  body.hv-setup-visible #hvEntryShell,
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup),
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{overflow:hidden!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{
+    grid-template-rows:166px 86px 162px minmax(72px,1fr) 128px!important;
+    gap:4px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:27px!important}
+}
