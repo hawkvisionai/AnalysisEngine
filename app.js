@@ -10,7 +10,10 @@
     evaluations: [],
     correct: 0,
     wrong: 0,
-    isAnalyzing: false
+    isAnalyzing: false,
+    strategyMethod: null,
+    historyIndex: null,
+    historyLoading: null
   };
 
   const SESSION_KEY = "hawkvision_active_shoe_v25";
@@ -28,6 +31,94 @@
     cancelNewShoe: $("cancelNewShoe"), confirmNewShoe: $("confirmNewShoe"),
     toast: $("toast"), advancedMode: $("advancedMode")
   };
+
+  const BASIC_MIN_HISTORY = 10;
+  const BASIC_INDEX_CACHE_KEY = "hv-basic-d-index-v1";
+  const BASIC_INDEX_TTL_MS = 6*60*60*1000;
+  const D9_METHODS = new Set(["standard","advanced30","advanced60","steady","aggressive"]);
+
+  function outcomeCode(winner) {
+    return winner === "莊" ? "B" : winner === "閒" ? "P" : null;
+  }
+
+  function runSig(codes) {
+    if (!codes.length) return "";
+    const last = codes[codes.length - 1];
+    let streak = 1;
+    for (let i = codes.length - 2; i >= 0; i -= 1) { if (codes[i] === last) streak += 1; else break; }
+    let transitions = 0, max = 1, cur = 1;
+    for (let i = 1; i < codes.length; i += 1) {
+      if (codes[i] !== codes[i - 1]) { transitions += 1; cur = 1; }
+      else { cur += 1; max = Math.max(max, cur); }
+    }
+    return `${last}|${Math.min(streak,4)}|${Math.min(transitions,6)}|${Math.min(max,5)}`;
+  }
+
+  async function loadBasicHistoryIndex() {
+    if (state.historyIndex) return state.historyIndex;
+    if (state.historyLoading) return state.historyLoading;
+    state.historyLoading = (async () => {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(BASIC_INDEX_CACHE_KEY) || "null");
+        if (cached && Date.now()-Number(cached.savedAt||0) < BASIC_INDEX_TTL_MS) {
+          const maps={6:new Map(cached.m6||[]),9:new Map(cached.m9||[])};
+          state.historyIndex=maps;
+          return maps;
+        }
+      } catch (_) {}
+      if (!window.supabase || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) throw new Error("歷史資料庫設定不存在");
+      const historyClient = window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+      const rows = [];
+      const step = 1000;
+      for (let from = 0; ; from += step) {
+        const { data, error } = await historyClient.from("games")
+          .select("shoe_id,game_number,winner")
+          .range(from, from + step - 1);
+        if (error) throw error;
+        const batch = Array.isArray(data) ? data : [];
+        rows.push(...batch);
+        if (batch.length < step) break;
+        if (rows.length > 50000) throw new Error("歷史資料筆數異常");
+      }
+      const byShoe = new Map();
+      for (const g of rows) {
+        if (!byShoe.has(g.shoe_id)) byShoe.set(g.shoe_id, []);
+        byShoe.get(g.shoe_id).push(g);
+      }
+      const maps = { 6: new Map(), 9: new Map() };
+      for (const games of byShoe.values()) {
+        games.sort((a,b) => Number(a.game_number||0) - Number(b.game_number||0));
+        const codes = games.map(g => ({ code: outcomeCode(g.winner), winner: g.winner })).filter(x => x.code);
+        for (const N of [6,9]) {
+          for (let j = N; j < codes.length; j += 1) {
+            const sig = runSig(codes.slice(j-N,j).map(x => x.code));
+            const next = codes[j].winner;
+            if (!(next === "莊" || next === "閒")) continue;
+            let rec = maps[N].get(sig);
+            if (!rec) { rec = { 莊:0, 閒:0 }; maps[N].set(sig, rec); }
+            rec[next] += 1;
+          }
+        }
+      }
+      state.historyIndex = maps;
+      try { sessionStorage.setItem(BASIC_INDEX_CACHE_KEY,JSON.stringify({savedAt:Date.now(),m6:[...maps[6]],m9:[...maps[9]]})); } catch (_) {}
+      return maps;
+    })();
+    try { return await state.historyLoading; } finally { state.historyLoading = null; }
+  }
+
+  async function searchRoadStructure(nonTieRounds) {
+    const prefer9 = D9_METHODS.has(state.strategyMethod);
+    const N = prefer9 && nonTieRounds.length >= 9 ? 9 : 6;
+    if (nonTieRounds.length < N) return null;
+    const maps = await loadBasicHistoryIndex();
+    const codes = nonTieRounds.slice(-N).map(outcomeCode).filter(Boolean);
+    const rec = maps[N].get(runSig(codes));
+    if (!rec) return null;
+    const total = Number(rec.莊||0) + Number(rec.閒||0);
+    if (total < BASIC_MIN_HISTORY || Number(rec.莊||0) === Number(rec.閒||0)) return null;
+    return { counts:{莊:Number(rec.莊||0),閒:Number(rec.閒||0)}, total, N };
+  }
 
   function showToast(message) {
     els.toast.textContent = message;
@@ -406,17 +497,9 @@
     setAnalyzing(true);
 
     try {
-      const rows = await callSearchRpc(searchSequence);
-      const counts = { "莊": 0, "閒": 0 };
-      let total = 0;
-
-      for (const row of rows) {
-        if (row.outcome in counts) {
-          counts[row.outcome] = Number(row.match_count || 0);
-        }
-      }
-
-      total = counts["莊"] + counts["閒"];
+      const road = await searchRoadStructure(nonTieRounds);
+      const counts = road?.counts || { "莊": 0, "閒": 0 };
+      const total = road?.total || 0;
 
       if (!total) {
         clearDecisionResult();
@@ -501,17 +584,14 @@
 
     let evaluation = null;
 
-    if (state.pendingPrediction) {
-      // 和局屬於中性結果：不計正確，也不計錯誤。
-      // 莊／閒結果才用來驗證上一局預測。
-      if (result !== "和") {
-        if (state.pendingPrediction === result) {
-          state.correct += 1;
-          evaluation = "correct";
-        } else {
-          state.wrong += 1;
-          evaluation = "wrong";
-        }
+    if (state.pendingPrediction && result !== "和") {
+      // 基礎核心忽略和局：和局不消耗上一個莊／閒判定。
+      if (state.pendingPrediction === result) {
+        state.correct += 1;
+        evaluation = "correct";
+      } else {
+        state.wrong += 1;
+        evaluation = "wrong";
       }
       state.pendingPrediction = null;
     }
@@ -521,7 +601,7 @@
     renderAll();
     saveSession();
 
-    if (state.analysisStarted) {
+    if (state.analysisStarted && result !== "和") {
       await analyze(true);
     }
   }
@@ -583,11 +663,18 @@
   });
 
   window.HawkVisionAnalysisCore={
+    setStrategy(method){ state.strategyMethod = method || null; },
     analyzeNow(){ return analyze(false); },
     resetEvaluationStatsPreserveShoe(){
       state.evaluations=state.rounds.map(()=>null);
       state.correct=0; state.wrong=0;
       renderAll(); saveSession();
+    },
+    deactivateAnalysisPreserveShoe(){
+      state.analysisStarted=false;
+      state.pendingPrediction=null;
+      resetAnalysisDisplay();
+      saveSession();
     },
     resetShoe(){ startNewShoe(); },
     setLookback(n){ const v=Math.max(1,Number(n)||6); els.lookback.value=String(v); saveSession(); },
@@ -612,6 +699,7 @@
   const restored = restoreSession();
   renderAll();
   testConnection();
+  loadBasicHistoryIndex().then(()=>setDbStatus("資料庫已連線","ok")).catch(error=>{console.error("基礎路型歷史載入失敗",error);setDbStatus("分析歷史載入失敗","error")});
 
   // 若會員在分析已啟動後誤按 F5，恢復牌靴並重新取得最新判定。
   if (!restored || !state.analysisStarted) {

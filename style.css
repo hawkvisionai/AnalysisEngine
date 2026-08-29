@@ -621,7 +621,10 @@ body:not(.brand-intro-active) .app-shell{
 .hv-used-total{white-space:nowrap;color:#c8bfd3;font-size:13px}.hv-used-total b{display:inline-block;min-width:5ch;text-align:right;color:#fff;font-size:16px}
 .hv-final-row{display:grid;grid-template-columns:3fr 3fr 1fr 3fr;gap:10px}.hv-final-cell,.hv-final-enter{min-height:66px;box-sizing:border-box;border-radius:12px}.hv-final-cell{border:1px solid #514663;background:#211b2d;padding:9px 12px}.hv-final-cell label{display:block;color:#c7bdd3;font-size:11px;font-weight:900;margin-bottom:5px}
 .hv-final-amount input{width:100%;border:0;background:transparent;color:#fff;font-size:18px;font-weight:900;outline:none}.hv-final-units strong{font-size:21px;color:#fff}.hv-final-commission{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px}.hv-final-commission label{margin:0 0 5px}.hv-final-enter{border:1px solid #806ac0;background:#6654a4;color:#fff;font-size:17px;font-weight:900}
-#hvEntryShell .hv-entry-actions,#hvEntryHint{display:none!important}
+#hvEntryShell .hv-entry-actions{display:none!important} #hvEntryHint{display:none!important}
+#hvEntryShell .hv-entry-card:has(#hvNewPassword) .hv-entry-actions{display:grid!important;grid-template-columns:1fr!important}
+#hvEntryShell .hv-entry-card:has(#hvNewPassword) #hvEntryNext{display:block!important;width:100%}
+.hv-hidden-basic{display:none!important}
 .hv-analysis-brand{display:none;align-items:center;gap:10px;margin:8px auto;width:min(1180px,calc(100vw - 36px))}.hv-analysis-brand img{width:52px;height:52px;object-fit:contain}.hv-analysis-brand>span{display:flex;flex-direction:column}.hv-analysis-brand b{font-size:25px}.hv-analysis-brand i{font-style:normal;color:#f3f2f5}.hv-analysis-brand em{font-style:normal;color:#7657ff}.hv-analysis-brand small{color:#e7b92f;font-size:9px;font-weight:900;letter-spacing:.08em}body.hv-analysis-visible .hv-analysis-brand{display:flex}
 @media(min-width:761px){html,body{height:100%;overflow:hidden}#hvEntryShell{overflow:hidden!important}#hvEntryShell .hv-entry-card{width:min(1220px,calc(100vw - 48px))!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;padding:12px 18px!important}#hvEntryShell .hv-all-setup{gap:7px!important;margin-top:6px!important}#hvEntryShell .hv-setup-section{padding:9px 13px!important}#hvEntryShell .hv-setup-section h3{margin-bottom:6px!important}#hvEntryShell .hv-choice{min-height:42px!important}#hvEntryShell .hv-time-panel{padding:10px!important;margin-bottom:8px!important}#hvEntryShell .hv-time-big{font-size:36px!important}#hvEntryShell .hv-hour-card{padding:10px 12px!important}}
 @media(max-width:760px){.hv-brand-lockup img{width:46px;height:46px}.hv-brand-copy b{font-size:20px}.hv-brand-copy small{font-size:7px}.hv-final-row{grid-template-columns:3fr 3fr}.hv-hours-top-right{flex-direction:column;align-items:flex-end}}
@@ -931,3 +934,6 @@ body.hv-analysis-visible .hv-result-money strong{font-size:25px!important}
 .bead-grid{min-height:336px}
 .bead-cell{min-height:50px}
 @media(max-width:760px){.hv-suggested-bet-card{grid-template-columns:1fr!important}.hv-skip-settle{justify-self:center}.bead-grid{min-height:0}}
+
+#hvEntryShell .hv-entry-card:has(#hvNewPassword) #hvEntryHint{display:block!important}
+#hvEntryShell .hv-fixed-setup .hv-final-row.basic-mode{grid-template-columns:2.4fr 3fr 1.6fr!important}
