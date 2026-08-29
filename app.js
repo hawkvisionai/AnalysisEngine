@@ -175,6 +175,28 @@
     }
   }
 
+  function showNoSignalState() {
+    els.decisionCard.className = "decision waiting-state";
+    els.decision.textContent = "等待有效訊號";
+    els.decisionPercent.textContent = "";
+    els.confidence.textContent = "暫不下注";
+    els.confidence.classList.add("is-waiting");
+    els.warning.classList.add("hidden");
+  }
+
+  function showCorePausedState() {
+    els.decisionCard.className = "decision waiting-state";
+    els.decision.textContent = "暫停分析";
+    els.decisionPercent.textContent = "";
+    els.confidence.textContent = "等待恢復";
+    els.confidence.classList.add("is-waiting");
+    els.warning.classList.add("hidden");
+  }
+
+  function refreshSuggestedBet() {
+    window.HawkVisionSessionPolicy?.refreshSuggestion?.();
+  }
+
   function clearWaitingStyles() {
     els.confidence.classList.remove("is-waiting");
     if (els.accuracy) els.accuracy.classList.remove("is-waiting");
@@ -502,11 +524,9 @@
       const total = road?.total || 0;
 
       if (!total) {
-        clearDecisionResult();
-        els.confidence.textContent = "—";
-        // 會員端不顯示「找不到相同歷史序列」或任何歷史樣本資訊。
-        els.warning.classList.add("hidden");
         state.pendingPrediction = null;
+        showNoSignalState();
+        refreshSuggestedBet();
         saveSession();
         return;
       }
@@ -551,20 +571,26 @@
       const lowConfidence =
         confidence < Number(cfg.LOW_CONFIDENCE_PERCENT || 40);
 
-      // 左側：歷史符合率。右側：HawkVision 綜合信心度。
-      showDecisionResult(outcome, `${historicalRate}%`, true);
-      els.confidence.textContent = `${confidence}%`;
-      els.warning.classList.toggle("hidden", !lowConfidence);
+      // 先保存內部判定；核心停止期間仍在背景重播，但不對會員顯示方向，也不列入績效。
       state.pendingPrediction = outcome;
       state.analysisStarted = true;
+      const publicSignal = window.HawkVisionSessionPolicy?.isPredictionPublic?.() !== false;
+      if (publicSignal) {
+        showDecisionResult(outcome, `${historicalRate}%`, true);
+        els.confidence.textContent = `${confidence}%`;
+        els.warning.classList.toggle("hidden", !lowConfidence);
+      } else {
+        showCorePausedState();
+      }
+      refreshSuggestedBet();
       saveSession();
 
       if (!auto) showToast("分析完成");
     } catch (error) {
       // 會員端不顯示技術錯誤或歷史搜尋細節。
-      clearDecisionResult();
-      els.confidence.textContent = "—";
-      els.warning.classList.add("hidden");
+      state.pendingPrediction = null;
+      showNoSignalState();
+      refreshSuggestedBet();
       setDbStatus(error?.message?.includes("57014") || error?.message?.includes("statement timeout") ? "歷史分析資料正在逾時，請執行 v3.1 SQL 優化" : "資料庫連線或函式有誤", "error");
       showToast("分析暫時無法使用");
       saveSession();
@@ -585,13 +611,16 @@
     let evaluation = null;
 
     if (state.pendingPrediction && result !== "和") {
-      // 基礎核心忽略和局：和局不消耗上一個莊／閒判定。
-      if (state.pendingPrediction === result) {
-        state.correct += 1;
-        evaluation = "correct";
-      } else {
-        state.wrong += 1;
-        evaluation = "wrong";
+      // 核心停止期間的背景判斷只用於恢復條件，不列入前台正確/錯誤/連勝敗/正確率。
+      const countEvaluation = window.HawkVisionSessionPolicy?.shouldCountLastResult?.() !== false;
+      if (countEvaluation) {
+        if (state.pendingPrediction === result) {
+          state.correct += 1;
+          evaluation = "correct";
+        } else {
+          state.wrong += 1;
+          evaluation = "wrong";
+        }
       }
       state.pendingPrediction = null;
     }
@@ -664,6 +693,7 @@
 
   window.HawkVisionAnalysisCore={
     setStrategy(method){ state.strategyMethod = method || null; },
+    getPendingPrediction(){ return state.pendingPrediction; },
     analyzeNow(){ return analyze(false); },
     resetEvaluationStatsPreserveShoe(){
       state.evaluations=state.rounds.map(()=>null);

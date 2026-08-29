@@ -48,6 +48,7 @@
   let accessWatch=null;
   let checking=false;
   let accessLocked=false;
+  let logoutInProgress=false;
 
   function authCover(){
     return document.getElementById("hvAuthCover");
@@ -69,12 +70,13 @@
   }
 
   async function globalLogout(){
-    if(accessWatch){
-      clearInterval(accessWatch);
-      accessWatch=null;
-    }
-    try{await client.auth.signOut({scope:"global"})}catch{}
-    try{await client.auth.signOut({scope:"local"})}catch{}
+    if(logoutInProgress)return;
+    logoutInProgress=true;
+    window.__hvLogoutInProgress=true;
+    if(accessWatch){clearInterval(accessWatch);accessWatch=null;}
+    currentUserId="";checking=false;
+    document.body.classList.remove("hv-auth-ready");
+    try{await client.auth.signOut({scope:"global"})}catch(error){console.warn("HawkVision logout",error)}
     hvClearActiveUser();
     window.location.replace("https://hawkvisionai.com/?logout=1");
   }
@@ -167,6 +169,7 @@
   }
 
   boot().catch((error)=>{
+    if(logoutInProgress||window.__hvLogoutInProgress)return;
     console.error("HawkVision auth gate failed",error);
     window.location.replace("https://hawkvisionai.com/");
   });
