@@ -1116,3 +1116,85 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
 @media(max-width:760px) and (max-height:680px){
   #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){overflow:auto!important}
 }
+
+/* ===== v3.4.5 final setup proportions + desktop road workspace ===== */
+/* Desktop only: exact 2:3:3:2 control ratio. Closed road restores equal INPUT/RESULT cards. */
+@media screen and (min-width:901px){
+  body.hv-analysis-visible .hv-analysis-start-row{
+    grid-template-columns:2fr 3fr 3fr 2fr!important;
+    gap:10px!important;
+    width:100%!important;
+  }
+  body.hv-analysis-visible .hv-required-games{min-width:0!important;padding:0 10px!important;justify-content:center!important;white-space:nowrap!important}
+  body.hv-analysis-visible.hv-road-closed .top-grid{grid-template-columns:1fr 1fr!important;align-items:stretch!important}
+  body.hv-analysis-visible.hv-road-closed .control-card,
+  body.hv-analysis-visible.hv-road-closed .result-card{width:auto!important;max-width:none!important;min-width:0!important}
+
+  /* Road-review workspace: remove vertical dead space so INPUT + all six bead rows fit together. */
+  body.hv-analysis-visible.hv-road-open{padding-top:14px!important;padding-bottom:14px!important}
+  body.hv-analysis-visible.hv-road-open .brand-bar{margin-bottom:9px!important}
+  body.hv-analysis-visible.hv-road-open .control-card{padding:12px 16px!important}
+  body.hv-analysis-visible.hv-road-open .control-card .section-title h2{margin:2px 0 0!important;line-height:1.05!important}
+  body.hv-analysis-visible.hv-road-open .result-buttons{margin-top:8px!important;gap:10px!important}
+  body.hv-analysis-visible.hv-road-open .result-buttons .result{height:68px!important;min-height:68px!important;font-size:34px!important}
+  body.hv-analysis-visible.hv-road-open .hv-analysis-start-row{margin-top:8px!important}
+  body.hv-analysis-visible.hv-road-open .hv-required-games,
+  body.hv-analysis-visible.hv-road-open .hv-analysis-start-row button{height:38px!important;min-height:38px!important}
+  body.hv-analysis-visible.hv-road-open .tool-row{margin-top:7px!important}
+  body.hv-analysis-visible.hv-road-open .tool-row button{height:38px!important;min-height:38px!important;padding:7px 10px!important}
+  body.hv-analysis-visible.hv-road-open .bead-card{margin-top:9px!important;padding:12px 16px!important}
+  body.hv-analysis-visible.hv-road-open .bead-header{margin-bottom:7px!important}
+  body.hv-analysis-visible.hv-road-open .bead-header h2{margin:2px 0 0!important}
+  body.hv-analysis-visible.hv-road-open .totals div{padding:6px 9px!important}
+  body.hv-analysis-visible.hv-road-open .bead-grid{min-height:0!important;grid-template-rows:repeat(6,clamp(44px,6.1vh,56px))!important}
+}
+
+/* Phone setup only. Do not affect the time-package page or the analysis workspace. */
+@media screen and (max-width:760px){
+  body.hv-setup-visible{height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;overscroll-behavior:none!important}
+  body.hv-setup-visible #hvEntryShell{height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;overscroll-behavior:none!important;padding:6px!important;align-items:center!important}
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){
+    height:calc(100dvh - 12px)!important;max-height:calc(100dvh - 12px)!important;overflow:hidden!important;overscroll-behavior:none!important;padding:9px!important
+  }
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup) #hvEntryTitle{min-height:48px!important;margin:0 0 3px!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{
+    height:calc(100% - 51px)!important;max-height:none!important;min-height:0!important;
+    display:grid!important;grid-template-rows:minmax(0,1.72fr) minmax(0,.82fr) minmax(0,1.34fr) minmax(72px,.62fr) minmax(142px,1.18fr)!important;
+    gap:5px!important;margin:0!important;overflow:hidden!important
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section{padding:7px 9px!important;min-height:0!important;overflow:hidden!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section h3{font-size:13px!important;margin:0 0 4px!important;line-height:1.15!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice-grid{gap:4px!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:31px!important;padding:4px 8px!important;font-size:13px!important;line-height:1.1!important}
+
+  /* The family section no longer reserves an unnecessary empty lower area. */
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section:nth-child(2){align-self:stretch!important}
+
+  /* Warning gets readable type and useful height. */
+  body.hv-setup-visible #hvEntryShell .hv-warning-slot{padding:8px 10px!important;display:flex!important;align-items:center!important;justify-content:center!important}
+  body.hv-setup-visible #hvEntryShell .hv-warning-copy{width:100%!important;text-align:center!important}
+  body.hv-setup-visible #hvEntryShell .hv-warning-copy strong{font-size:14px!important;line-height:1.15!important;margin-bottom:4px!important}
+  body.hv-setup-visible #hvEntryShell .hv-warning-copy p{font-size:12px!important;line-height:1.28!important;margin:0!important}
+
+  /* Final controls are deliberately vertical: suggested units -> bankroll -> enter. */
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-row,
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-row.basic-mode{
+    display:grid!important;grid-template-columns:1fr!important;grid-template-rows:44px 52px 38px!important;gap:5px!important;min-height:0!important;height:auto!important
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-units{grid-column:1!important;grid-row:1!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-amount{grid-column:1!important;grid-row:2!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-enter{grid-column:1!important;grid-row:3!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-commission{display:none!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-cell{width:100%!important;min-width:0!important;min-height:0!important;height:auto!important;padding:5px 9px!important;overflow:hidden!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-cell label{font-size:10px!important;margin-bottom:2px!important;line-height:1!important}
+  body.hv-setup-visible #hvEntryShell .hv-units-split{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:10px!important}
+  body.hv-setup-visible #hvEntryShell .hv-final-units strong{font-size:16px!important;white-space:nowrap!important}
+  body.hv-setup-visible #hvEntryShell .hv-one-bet{font-size:14px!important;text-align:left!important;overflow:visible!important;text-overflow:clip!important}
+  body.hv-setup-visible #hvPointsInput{width:100%!important;height:28px!important;box-sizing:border-box!important;padding:2px 7px!important;font-size:17px!important;line-height:1.05!important}
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-final-enter{width:100%!important;height:38px!important;min-height:38px!important;padding:5px 10px!important;font-size:15px!important;white-space:nowrap!important;writing-mode:horizontal-tb!important}
+}
+
+/* v3.4.5 intentionally removes the old <=680px setup-scroll fallback. */
+@media screen and (max-width:760px) and (max-height:680px){
+  body.hv-setup-visible #hvEntryShell .hv-entry-card:has(.hv-fixed-setup){overflow:hidden!important}
+}
