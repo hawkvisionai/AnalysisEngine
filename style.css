@@ -1030,3 +1030,21 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
   body.hv-analysis-visible .bead-cell{min-width:0!important;min-height:0!important;width:auto!important;height:auto!important;overflow:hidden!important}
   body.hv-analysis-visible .bead{width:70%!important;max-width:none!important;font-size:clamp(10px,3.2vw,14px)!important}
 }
+
+
+/* ===== v3.4.3 mobile-only verified overrides; desktop rules intentionally untouched ===== */
+@media screen and (max-width:760px){
+  body.hv-basic-mode .hv-commission-inline,
+  body.hv-basic-mode .hv-final-commission,
+  body.hv-basic-mode [data-hv-commission],
+  body.hv-basic-mode .hv-commission-setup{display:none!important}
+  body.hv-analysis-visible .brand-bar{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;overflow:hidden!important}
+  body.hv-analysis-visible .brand-lockup{display:grid!important;grid-template-columns:42px minmax(0,1fr) auto!important;align-items:center!important;width:100%!important;max-width:100%!important;min-width:0!important}
+  body.hv-analysis-visible .brand-bar>div:last-child{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;width:100%!important;max-width:100%!important;min-width:0!important;gap:6px!important}
+  body.hv-analysis-visible .top-grid{width:100%!important;max-width:100%!important;min-width:0!important;overflow:visible!important}
+  body.hv-analysis-visible .control-card,body.hv-analysis-visible .result-card{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+  body.hv-analysis-visible .bead-card{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow:hidden!important}
+  body.hv-analysis-visible .bead-grid{display:grid!important;width:100%!important;max-width:100%!important;min-width:0!important;aspect-ratio:11/6!important;grid-template-columns:repeat(11,minmax(0,1fr))!important;grid-template-rows:repeat(6,minmax(0,1fr))!important;overflow:hidden!important}
+  body.hv-analysis-visible .bead-cell{box-sizing:border-box!important;min-width:0!important;min-height:0!important;width:auto!important;height:auto!important;overflow:hidden!important}
+  body.hv-analysis-visible .bead{width:72%!important;max-width:28px!important;min-width:0!important;font-size:clamp(9px,3vw,13px)!important}
+}
