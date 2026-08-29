@@ -485,3 +485,449 @@ body:not(.brand-intro-active) .app-shell{
   opacity:1;
   transform:none;
 }
+
+/* v3.3.15 Member Test */
+.hv-test-login{position:fixed;inset:0;z-index:10020;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(10,8,15,.96)}
+.hv-test-login.show{display:flex}
+.hv-test-login-card{width:min(440px,100%);background:#211c2d;border:1px solid #493f5b;border-radius:18px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.hv-test-login-card h2{margin:4px 0 8px}.hv-test-login-card p,.hv-test-note{color:#bdb3c9;line-height:1.55;font-size:13px}
+.hv-test-kicker{font-size:12px;color:#c8bfd3;font-weight:900;letter-spacing:.08em}
+.hv-test-login-card label{display:block;font-weight:800;margin:13px 0 6px}
+.hv-test-login-card input{width:100%;box-sizing:border-box;background:#181420;border:1px solid #5a4e70;color:#fff;border-radius:10px;padding:12px;font:inherit}
+#hvTestLoginBtn{width:100%;margin-top:16px;border:1px solid #8067c7;background:#6654a4;color:#fff;border-radius:12px;padding:13px;font-weight:900;cursor:pointer}
+.hv-test-note{margin-top:12px;padding:10px 12px;border:1px dashed #5a4e70;border-radius:10px}
+.hv-entry-card{width:min(760px,100%)}
+.hv-all-setup{display:grid;gap:12px;margin-top:12px}
+.hv-setup-section{padding:14px;border:1px solid #493f5b;border-radius:14px;background:rgba(48,40,63,.42)}
+.hv-setup-section h3{margin:0 0 10px;font-size:15px}
+.hv-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.hv-choice-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hv-choice{border:1px solid #5a4e70;background:#30283f;color:#fff;border-radius:11px;padding:12px 8px;font-weight:900;cursor:pointer}
+.hv-choice.selected{background:#6654a4;border-color:#8a73c5;box-shadow:0 0 0 2px rgba(138,115,197,.15)}
+.hv-choice:disabled{opacity:.42;cursor:not-allowed}
+.hv-setup-bottom{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.hv-setup-summary{padding:11px 12px;border:1px solid #493f5b;border-radius:11px;color:#c8bfd3;font-size:12px;line-height:1.7;background:#181420}
+.hv-test-badge{display:inline-flex;margin-left:8px;padding:3px 8px;border-radius:999px;background:#4b3f62;color:#e7def4;font-size:10px;font-weight:900}
+@media(max-width:700px){.hv-choice-grid,.hv-choice-grid.four{grid-template-columns:1fr 1fr}.hv-setup-bottom{grid-template-columns:1fr}.hv-entry-card{padding:14px}}
+
+/* ===== v3.3.18 Basic Member Test ===== */
+.hv-entry-card{width:min(980px,100%);padding:18px 20px 20px}
+.hv-entry-card>h2{margin-bottom:4px}
+.hv-entry-card>p{margin-top:0;color:#bdb3c9}
+.hv-all-setup{display:grid;gap:12px;margin-top:14px}
+.hv-setup-section{padding:14px 16px;border:1px solid #493f5b;border-radius:14px;background:linear-gradient(180deg,rgba(48,40,63,.72),rgba(34,28,46,.78))}
+.hv-setup-section h3{font-size:16px;margin:0 0 11px;color:#eee8f5}
+.hv-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.hv-choice-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hv-choice{min-height:50px;border:1px solid #62537b;background:#241d31;color:#eee8f5;border-radius:11px;padding:10px;font-weight:900;cursor:pointer;transition:.15s}
+.hv-choice:hover{border-color:#816dad;background:#2d2540}
+.hv-choice.selected{background:#6755a1;border-color:#9a83d2;color:#fff;box-shadow:0 0 0 2px rgba(154,131,210,.13)}
+.hv-choice.future{opacity:.5}
+.hv-setup-bottom-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.8fr);gap:12px}
+.hv-amount-box,.hv-commission-setup{padding:14px 16px;border:1px solid #493f5b;border-radius:14px;background:linear-gradient(180deg,rgba(48,40,63,.72),rgba(34,28,46,.78))}
+.hv-amount-box label{display:block;color:#c8bfd3;font-weight:800;font-size:12px;margin-bottom:7px}
+.hv-amount-box input{width:100%;box-sizing:border-box;border:1px solid #5a4e70;background:#181420;color:#fff;border-radius:10px;padding:12px 13px;font-size:17px}
+.hv-commission-setup{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.hv-commission-copy strong{display:block;font-size:16px}.hv-commission-copy small{display:block;color:#bdb3c9;margin-top:3px}
+.hv-setup-chips{display:flex;flex-wrap:wrap;gap:7px;margin:10px 2px 2px}
+.hv-setup-chip{padding:5px 9px;border:1px solid #514663;border-radius:999px;background:#1a1622;color:#d8cfea;font-size:11px;font-weight:800}
+.hv-entry-actions{display:grid!important;grid-template-columns:150px 1fr;gap:10px;margin-top:12px}
+.hv-entry-actions #hvEntryBack{display:none!important}
+.hv-entry-actions button{min-height:46px}
+#hvEntryNext{font-size:16px}
+#hvEntrySkip{display:inline-block!important}
+.hv-input-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.hv-commission-inline{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(35,29,48,.65)}
+.hv-commission-inline>span{font-size:12px;color:#c8bfd3;font-weight:900}
+.hv-commission-toggle{position:relative;width:76px;height:34px;border:0;border-radius:999px;background:#625d68;color:#fff;cursor:pointer;font-weight:900;transition:.18s}
+.hv-commission-toggle:after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.35);transition:.18s}
+.hv-commission-toggle .on-label,.hv-commission-toggle .off-label{position:absolute;top:50%;transform:translateY(-50%);font-size:10px}
+.hv-commission-toggle .on-label{left:11px;opacity:0}.hv-commission-toggle .off-label{right:10px}
+.hv-commission-toggle.on{background:#2e9a5b}.hv-commission-toggle.on:after{left:46px}
+.hv-commission-toggle.on .on-label{opacity:1}.hv-commission-toggle.on .off-label{opacity:0}
+.hv-suggested-bet-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 13px;padding:13px 15px;border:1px solid rgba(151,128,211,.48);border-radius:13px;background:rgba(77,61,112,.18)}
+.hv-suggested-bet-card span{font-size:12px;color:#c8bfd3;font-weight:800}.hv-suggested-bet-card strong{font-size:24px;color:#f1eaff}
+.hv-test-hours-note{padding:10px 12px;border:1px dashed #5a4e70;border-radius:11px;color:#c8bfd3;font-size:12px;line-height:1.6;margin-bottom:12px}
+.hv-test-hour-opened{padding:10px 12px;margin-bottom:10px;border:1px solid rgba(82,169,112,.55);background:rgba(46,154,91,.12);color:#d7f3df;border-radius:11px;font-weight:800}
+@media(max-width:760px){
+  .hv-choice-grid,.hv-choice-grid.four{grid-template-columns:1fr}
+  .hv-setup-bottom-row{grid-template-columns:1fr}
+  .hv-entry-actions{grid-template-columns:1fr 2fr}
+  .hv-input-head-actions{justify-content:flex-start}
+  .hv-suggested-bet-card strong{font-size:20px}
+}
+
+/* ===== v3.3.19 refinements ===== */
+
+/* Desktop setup page follows the wide v0.1.0 composition instead of the narrow modal. */
+@media(min-width:761px){
+  #hvEntryShell{align-items:center!important;padding:24px!important}
+  #hvEntryShell .hv-entry-card{
+    width:min(1180px,calc(100vw - 56px))!important;
+    max-width:none!important;
+    max-height:94vh!important;
+    padding:22px 24px 20px!important;
+  }
+  #hvEntryShell .hv-choice-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #hvEntryShell .hv-choice-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  #hvEntryShell .hv-choice{min-height:54px!important;font-size:16px}
+  #hvEntryShell .hv-setup-bottom-row{grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr)!important}
+}
+
+/* Suggested preparation units shown after staking + play style are selected. */
+.hv-prepare-units{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:13px 16px;border:1px solid #5f5078;border-radius:13px;
+  background:rgba(70,56,102,.25);color:#d8cfea;
+}
+.hv-prepare-units>div{display:flex;align-items:center;gap:14px}
+.hv-prepare-units span{font-size:13px;font-weight:900;color:#c9bfd7}
+.hv-prepare-units strong{font-size:22px;color:#fff}
+.hv-prepare-units small{font-size:11px;color:#b9aec7;text-align:right;line-height:1.45}
+.hv-prepare-units:not(.show) strong{font-size:13px;color:#b9aec7;font-weight:700}
+
+/* In-game commission control should visually match the current-mode chip. */
+.hv-input-head-actions{align-items:center!important;gap:8px!important}
+.hv-commission-inline{
+  min-height:40px!important;
+  box-sizing:border-box!important;
+  padding:5px 9px 5px 12px!important;
+  border-radius:12px!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  background:rgba(21,17,31,.45)!important;
+  gap:8px!important;
+}
+.hv-commission-inline>span{font-size:14px!important;line-height:1.35!important;color:#fff!important}
+.hv-commission-inline .hv-commission-toggle{
+  width:56px!important;height:28px!important;flex:0 0 56px!important;
+}
+.hv-commission-inline .hv-commission-toggle:after{
+  width:20px!important;height:20px!important;top:4px!important;left:4px!important;
+}
+.hv-commission-inline .hv-commission-toggle.on:after{left:32px!important}
+.hv-commission-inline .hv-commission-toggle .on-label{left:8px!important;font-size:9px!important}
+.hv-commission-inline .hv-commission-toggle .off-label{right:7px!important;font-size:9px!important}
+
+@media(max-width:760px){
+  .hv-prepare-units{align-items:flex-start;flex-direction:column;gap:5px}
+  .hv-prepare-units small{text-align:left}
+}
+
+/* v3.3.20 */
+.hv-brand-lockup{display:flex;align-items:center;gap:12px}.hv-brand-lockup img{width:62px;height:62px;object-fit:contain}
+.hv-brand-copy{display:flex;flex-direction:column;line-height:1}.hv-brand-copy b{font-size:29px}.hv-brand-copy i{font-style:normal;color:#f3f2f5}.hv-brand-copy em{font-style:normal;color:#7657ff}.hv-brand-copy small{margin-top:7px;color:#e7b92f;font-weight:900;letter-spacing:.09em;font-size:10px}
+#hvEntryTitle{display:flex;align-items:center;justify-content:space-between;gap:18px}.hv-top-actions,.hv-hours-top-right{display:flex;align-items:center;gap:10px}
+.hv-top-close,.hv-top-skip{border:1px solid #5b506c;background:#30283f;color:#fff;border-radius:10px;padding:9px 13px;font-weight:900}.hv-top-skip{background:#241e30;color:#cfc5dc}
+.hv-used-total{white-space:nowrap;color:#c8bfd3;font-size:13px}.hv-used-total b{display:inline-block;min-width:5ch;text-align:right;color:#fff;font-size:16px}
+.hv-final-row{display:grid;grid-template-columns:3fr 3fr 1fr 3fr;gap:10px}.hv-final-cell,.hv-final-enter{min-height:66px;box-sizing:border-box;border-radius:12px}.hv-final-cell{border:1px solid #514663;background:#211b2d;padding:9px 12px}.hv-final-cell label{display:block;color:#c7bdd3;font-size:11px;font-weight:900;margin-bottom:5px}
+.hv-final-amount input{width:100%;border:0;background:transparent;color:#fff;font-size:18px;font-weight:900;outline:none}.hv-final-units strong{font-size:21px;color:#fff}.hv-final-commission{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px}.hv-final-commission label{margin:0 0 5px}.hv-final-enter{border:1px solid #806ac0;background:#6654a4;color:#fff;font-size:17px;font-weight:900}
+#hvEntryShell .hv-entry-actions,#hvEntryHint{display:none!important}
+.hv-analysis-brand{display:none;align-items:center;gap:10px;margin:8px auto;width:min(1180px,calc(100vw - 36px))}.hv-analysis-brand img{width:52px;height:52px;object-fit:contain}.hv-analysis-brand>span{display:flex;flex-direction:column}.hv-analysis-brand b{font-size:25px}.hv-analysis-brand i{font-style:normal;color:#f3f2f5}.hv-analysis-brand em{font-style:normal;color:#7657ff}.hv-analysis-brand small{color:#e7b92f;font-size:9px;font-weight:900;letter-spacing:.08em}body.hv-analysis-visible .hv-analysis-brand{display:flex}
+@media(min-width:761px){html,body{height:100%;overflow:hidden}#hvEntryShell{overflow:hidden!important}#hvEntryShell .hv-entry-card{width:min(1220px,calc(100vw - 48px))!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;padding:12px 18px!important}#hvEntryShell .hv-all-setup{gap:7px!important;margin-top:6px!important}#hvEntryShell .hv-setup-section{padding:9px 13px!important}#hvEntryShell .hv-setup-section h3{margin-bottom:6px!important}#hvEntryShell .hv-choice{min-height:42px!important}#hvEntryShell .hv-time-panel{padding:10px!important;margin-bottom:8px!important}#hvEntryShell .hv-time-big{font-size:36px!important}#hvEntryShell .hv-hour-card{padding:10px 12px!important}}
+@media(max-width:760px){.hv-brand-lockup img{width:46px;height:46px}.hv-brand-copy b{font-size:20px}.hv-brand-copy small{font-size:7px}.hv-final-row{grid-template-columns:3fr 3fr}.hv-hours-top-right{flex-direction:column;align-items:flex-end}}
+
+/* ===== v3.3.21 layout corrections ===== */
+
+/* Analysis setup: closer to the original wide v0.1.0 proportions, not a small centered box. */
+@media(min-width:761px){
+  #hvEntryShell{
+    padding:18px 20px!important;
+    align-items:center!important;
+    overflow:hidden!important;
+  }
+  #hvEntryShell .hv-entry-card{
+    width:min(1320px,calc(100vw - 40px))!important;
+    max-width:none!important;
+    max-height:calc(100vh - 28px)!important;
+    overflow:hidden!important;
+    margin:0 auto!important;
+  }
+}
+
+/* Time package empty-state. */
+.hv-hours-none{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:108px;
+  border:1px solid #514663;
+  border-radius:12px;
+  background:#211b2d;
+  color:#cfc5dc;
+  font-weight:900;
+  text-align:center;
+  padding:18px;
+}
+
+/* Formal analysis page must remain scrollable so the road sections below stay reachable. */
+html,body{overflow:auto!important}
+body.hv-analysis-visible{overflow:auto!important}
+body.hv-analysis-visible .app-shell{overflow:visible!important}
+
+/* Remove the accidental extra brand strip added in v3.3.20. */
+.hv-analysis-brand{display:none!important}
+
+/* v3.3.22 hour-flow corrections */
+.hv-top-close.disabled,
+.hv-top-close:disabled{
+  opacity:.42!important;
+  cursor:not-allowed!important;
+  filter:saturate(.55);
+}
+
+/* v3.3.22 role-aware hours */
+.hv-hours-unlimited{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:108px;
+  border:1px solid #514663;
+  border-radius:12px;
+  background:#211b2d;
+  color:#ffffff;
+  font-size:20px;
+  font-weight:900;
+  text-align:center;
+  padding:18px;
+}
+
+/* v3.3.22 final hours-entry state
+   有剩餘時數時，時數包頁右上「進入分析」使用與分析設定頁「進入分析」相同主色；
+   無剩餘時數時維持灰暗停用狀態。 */
+#hvHoursEnter:not(:disabled){
+  background:#6654a4!important;
+  border-color:#806ac0!important;
+  color:#fff!important;
+  opacity:1!important;
+  cursor:pointer!important;
+  box-shadow:0 0 0 1px rgba(128,106,192,.18);
+}
+#hvHoursEnter:disabled{
+  background:#30283f!important;
+  border-color:#5b506c!important;
+  color:#9f96aa!important;
+  opacity:.42!important;
+  cursor:not-allowed!important;
+  box-shadow:none!important;
+}
+
+/* ===== v3.3.24 登入後分析設定面板 ===== */
+#hvEntryShell .hv-entry-card{overflow:hidden!important}
+#hvEntryShell .hv-progressive-setup{display:grid;gap:7px;margin-top:6px}
+#hvEntryShell .hv-progressive-setup .hv-setup-section{padding:8px 12px}
+#hvEntryShell .hv-progressive-setup .hv-setup-section h3{font-size:15px;margin:0 0 6px}
+#hvEntryShell .hv-progressive-setup .hv-choice{min-height:40px;padding:8px 10px;font-size:15px}
+#hvEntryShell .hv-choice-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+#hvEntryShell .hv-progressive-setup .hv-final-row{margin-top:0}
+#hvEntryShell .hv-progressive-setup .hv-final-cell,
+#hvEntryShell .hv-progressive-setup .hv-final-enter{min-height:62px}
+#hvEntryShell .hv-risk-section{background:linear-gradient(180deg,rgba(44,36,58,.72),rgba(31,25,42,.78))}
+#hvEntryError{min-height:0;margin:0!important}
+@media(min-width:761px){
+  #hvEntryShell{overflow:hidden!important;padding:14px 18px!important}
+  #hvEntryShell .hv-entry-card{
+    width:min(1320px,calc(100vw - 36px))!important;
+    max-height:calc(100vh - 24px)!important;
+    overflow:hidden!important;
+    padding:11px 18px 12px!important;
+  }
+  #hvEntryTitle{min-height:62px}
+  #hvEntryShell .hv-brand-lockup img{width:56px;height:56px}
+  #hvEntryShell .hv-brand-copy b{font-size:27px}
+}
+@media(max-height:780px) and (min-width:761px){
+  #hvEntryShell .hv-entry-card{transform:scale(.94);transform-origin:center center;width:min(1400px,calc(106vw - 30px))!important}
+}
+@media(max-width:760px){
+  #hvEntryShell{align-items:flex-start!important;overflow:auto!important}
+  #hvEntryShell .hv-entry-card{overflow:visible!important;max-height:none!important}
+  #hvEntryShell .hv-choice-grid.two{grid-template-columns:1fr 1fr}
+}
+
+/* ===== v3.3.25 固定設定框 + 分析起跑流程 ===== */
+#hvEntryShell .hv-fixed-setup{display:grid;grid-template-rows:repeat(4,minmax(74px,1fr)) 70px;gap:8px;height:calc(100vh - 132px);max-height:620px;min-height:500px;margin-top:6px}
+#hvEntryShell .hv-fixed-setup .hv-setup-section{margin:0!important;padding:9px 13px!important;min-height:0!important;overflow:hidden;border:1px solid #4d425e;border-radius:12px;background:#2a2336}
+#hvEntryShell .hv-fixed-setup .hv-setup-section.locked{background:#1d1925;border-color:#332c3d;color:#716a7a}
+#hvEntryShell .hv-fixed-setup .hv-setup-section h3{margin:0 0 7px!important;font-size:14px!important}
+#hvEntryShell .hv-fixed-setup .hv-choice{min-height:38px!important;padding:7px 10px!important;font-size:14px!important}
+#hvEntryShell .hv-warning-slot{display:block}.hv-warning-slot.locked h3{color:#6f6877}.hv-warning-slot.active strong{display:block;font-size:14px;margin-bottom:3px}.hv-warning-slot.active p{margin:0!important;font-size:12px!important;line-height:1.35!important;color:#d9d1df!important}.hv-warning-slot.red{border-color:#8b4853!important;background:rgba(98,42,52,.30)!important}.hv-warning-slot.orange{border-color:#9a6941!important;background:rgba(105,68,35,.28)!important}.hv-warning-slot.yellow{border-color:#928044!important;background:rgba(94,82,36,.25)!important}
+#hvEntryShell .hv-fixed-setup .hv-final-row{margin:0!important;min-height:70px!important;display:grid;grid-template-columns:2.3fr 2.6fr 1.2fr 1.5fr;gap:8px}.hv-fixed-setup .hv-final-row.locked-row{opacity:.45}.hv-fixed-setup .hv-final-cell,.hv-fixed-setup .hv-final-enter{min-height:70px!important}.hv-units-split{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%}.hv-one-bet{font-size:16px!important;color:#f1d58c!important;white-space:nowrap}
+#hvPointsInput{max-width:100%;box-sizing:border-box}
+/* 結果按鈕改為方形/矩形 */
+.result-buttons{gap:10px!important}.result-buttons .result{border-radius:10px!important;min-height:68px!important}
+/* 移除手動局數，加入兩個起跑按鈕 */
+.hv-analysis-start-row{display:grid;grid-template-columns:1fr 150px 150px;gap:10px;align-items:stretch;margin-top:12px}.hv-required-games{display:flex;align-items:center;padding:0 16px;min-height:48px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(28,23,37,.72);font-weight:900;color:#d8cfe2}.hv-analysis-start-row button{min-height:48px}.hv-analysis-start-row button:disabled{opacity:.38;cursor:not-allowed}.hv-bet-start{background:#6654a4!important}
+/* 右上點數兩格充分使用結果區寬度，固定不因數字移位 */
+.result-card .section-title.compact{display:grid!important;grid-template-columns:minmax(180px,.72fr) minmax(420px,1.28fr)!important;align-items:stretch!important;gap:14px!important}.hv-result-money.show{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important;gap:10px!important;margin:0!important}.hv-result-money .money-box{min-width:0!important;width:auto!important;display:flex;flex-direction:column;justify-content:center;padding:10px 14px!important}.hv-result-money strong{font-size:25px!important;white-space:nowrap!important;font-variant-numeric:tabular-nums}
+@media(min-width:761px){#hvEntryShell .hv-entry-card{height:min(760px,calc(100vh - 24px))!important;max-height:calc(100vh - 24px)!important}#hvEntryShell .hv-fixed-setup{height:calc(100% - 74px);max-height:none;min-height:0}}
+@media(max-width:900px){.result-card .section-title.compact{grid-template-columns:1fr!important}.hv-analysis-start-row{grid-template-columns:1fr 1fr}.hv-required-games{grid-column:1/-1}.hv-result-money strong{font-size:21px!important}}
+@media(max-width:760px){#hvEntryShell .hv-fixed-setup{height:auto;max-height:none;min-height:0;grid-template-rows:none}.hv-fixed-setup .hv-final-row{grid-template-columns:1fr 1fr!important}.hv-analysis-start-row{grid-template-columns:1fr 1fr}.result-buttons .result{min-height:58px!important}}
+
+/* ===== v3.3.26 設定框清晰度 + 有效局數 + 分析頁比例修正 ===== */
+/* 設定頁固定框：所有步驟佔滿可用高度，不靠捲動。 */
+@media(min-width:761px){
+  body.hv-setup-visible{overflow:hidden!important}
+  body.hv-analysis-visible{overflow:auto!important;height:auto!important;min-height:100%!important}
+  body.hv-analysis-visible .app-shell{max-width:1220px!important;margin:0 auto!important}
+  #hvEntryShell .hv-entry-card{height:min(760px,calc(100vh - 24px))!important}
+  #hvEntryShell .hv-fixed-setup{
+    height:calc(100% - 72px)!important;
+    grid-template-rows:1fr 1fr 1fr 1fr 82px!important;
+    gap:9px!important;
+  }
+  #hvEntryShell .hv-fixed-setup .hv-setup-section{padding:12px 15px!important}
+  #hvEntryShell .hv-fixed-setup .hv-setup-section h3{font-size:16px!important;margin-bottom:9px!important}
+  #hvEntryShell .hv-fixed-setup .hv-choice{min-height:44px!important;font-size:15px!important}
+  #hvEntryShell .hv-fixed-setup .hv-final-row{min-height:82px!important}
+  .hv-fixed-setup .hv-final-cell,.hv-fixed-setup .hv-final-enter{min-height:82px!important}
+}
+
+/* 本次帶入點數必須一眼看出可自行輸入。 */
+#hvEntryShell .hv-final-amount{border-color:#7b68ad!important;background:#2d2440!important;box-shadow:inset 0 0 0 1px rgba(149,126,208,.14)}
+#hvPointsInput{background:#17121f!important;border:1px solid #836eb6!important;border-radius:9px!important;padding:9px 11px!important;color:#fff!important;font-size:20px!important;font-weight:900!important;caret-color:#fff!important}
+#hvPointsInput:focus{border-color:#b49ae7!important;box-shadow:0 0 0 3px rgba(132,107,190,.22)!important}
+#hvPointsInput:disabled{background:#1b1721!important;border-color:#40374d!important;color:#77707f!important}
+
+/* 第四格只作警語區。平時完全空白，觸發時放大文字並置中。 */
+#hvEntryShell .hv-warning-slot{display:flex!important;align-items:center;justify-content:center;padding:12px 18px!important}
+#hvEntryShell .hv-warning-slot.locked{background:#1d1925!important;border-color:#332c3d!important}
+#hvEntryShell .hv-warning-copy{width:100%;text-align:center}
+#hvEntryShell .hv-warning-copy strong{font-size:19px!important;line-height:1.2!important;margin:0 0 7px!important}
+#hvEntryShell .hv-warning-copy p{font-size:15px!important;line-height:1.45!important;margin:0!important;color:#eee8f5!important}
+
+/* 有效局數提示：固定單行，不跨行。 */
+.hv-required-games{white-space:nowrap!important;word-break:keep-all!important;overflow:hidden!important;text-overflow:clip!important;justify-content:center!important;text-align:center!important;font-size:16px!important}
+
+/* 分析頁恢復原本整體比例：左右欄 1.05 / .95，頁面可正常向下顯示珠盤路。 */
+body.hv-analysis-visible .top-grid{grid-template-columns:1.05fr .95fr!important;gap:16px!important}
+body.hv-analysis-visible .control-card,body.hv-analysis-visible .result-card{padding:20px!important}
+body.hv-analysis-visible .bead-card{margin-top:16px!important}
+/* 莊閒和保留方形，但不要因改方形而撐高整個左欄。 */
+body.hv-analysis-visible .result-buttons{margin-top:18px!important;gap:12px!important}
+body.hv-analysis-visible .result-buttons .result{aspect-ratio:auto!important;max-width:none!important;width:100%!important;min-height:72px!important;height:72px!important;border-radius:10px!important;font-size:38px!important}
+/* 點數兩格使用右上方剩餘寬度，但不改動結果卡其他區域比例。 */
+body.hv-analysis-visible .result-card .section-title.compact{grid-template-columns:minmax(150px,.7fr) minmax(0,1.3fr)!important;gap:12px!important}
+body.hv-analysis-visible .hv-result-money .money-box{min-height:58px!important}
+body.hv-analysis-visible .hv-result-money strong{font-size:25px!important}
+
+@media(max-width:900px){
+  body.hv-analysis-visible .top-grid{grid-template-columns:1fr!important}
+  body.hv-analysis-visible .result-card .section-title.compact{grid-template-columns:1fr!important}
+  .hv-required-games{grid-column:1/-1!important}
+}
+
+/* ===== v3.3.27 自動輸入焦點 + 時數包確認 + 桌面分析頁原比例 ===== */
+/* 本次帶入點數自動 focus 時，游標明顯但不改變整體配色。 */
+#hvPointsInput:focus{
+  outline:none!important;
+  border-color:#c7aff4!important;
+  box-shadow:0 0 0 3px rgba(153,124,218,.28), inset 0 0 18px rgba(132,103,190,.08)!important;
+}
+
+/* 時數包：同時保留數量 - / + 與開啟按鈕。 */
+.hv-pack-actions{display:flex;align-items:center;gap:12px;margin-left:auto}
+.hv-pack-actions .hv-inline-stepper{margin-left:0!important}
+.hv-pack-actions .hv-inline-stepper button:disabled{opacity:.32;cursor:not-allowed}
+.hv-pack-actions .hv-hour-open{min-width:76px}
+
+/* HawkVision 同色系確認框，不使用瀏覽器原生 confirm。 */
+.hv-hour-confirm-overlay{
+  position:fixed;inset:0;z-index:99000;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(10,8,16,.74);backdrop-filter:blur(4px)
+}
+.hv-hour-confirm-card{
+  width:min(420px,calc(100vw - 32px));padding:22px;border-radius:16px;
+  border:1px solid #75639a;background:linear-gradient(180deg,#342a49,#241d31);
+  color:#fff;box-shadow:0 24px 72px rgba(0,0,0,.48);text-align:center
+}
+.hv-hour-confirm-card h3{font-size:22px;margin:0 0 16px}
+.hv-hour-confirm-detail{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #65547f;border-radius:11px;background:rgba(21,17,31,.55)}
+.hv-hour-confirm-detail span{font-weight:900;color:#efe8f7}.hv-hour-confirm-detail strong{color:#f1d58c}
+.hv-hour-confirm-card p{margin:15px 0 6px!important;color:#d8cfdf!important;font-size:14px}
+.hv-hour-confirm-warning{padding:10px 12px;border-radius:10px;border:1px solid rgba(232,184,83,.42);background:rgba(114,78,22,.18);color:#f4d58a;font-size:15px;font-weight:900}
+.hv-hour-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.hv-hour-confirm-actions button{border:1px solid #65547f;border-radius:10px;padding:11px 14px;background:#342a49;color:#fff;font-weight:900;cursor:pointer}
+.hv-hour-confirm-actions .primary{background:#6654a4!important}
+
+/* 桌面：直接回到正式 v3.3.12 的 1180px 主比例，再嵌入新版功能。 */
+@media(min-width:901px){
+  body.hv-analysis-visible{padding:22px!important;overflow:auto!important}
+  body.hv-analysis-visible .app-shell{width:min(1180px,100%)!important;max-width:1180px!important;margin:0 auto!important}
+  body.hv-analysis-visible .brand-bar{margin-bottom:16px!important}
+  body.hv-analysis-visible .top-grid{grid-template-columns:1.05fr .95fr!important;gap:16px!important;align-items:stretch!important}
+  body.hv-analysis-visible .control-card,
+  body.hv-analysis-visible .result-card{padding:18px!important;min-height:0!important;height:auto!important}
+
+  /* 左側輸入區：方形按鈕但高度接近原正式版，不把卡片撐高。 */
+  body.hv-analysis-visible .result-buttons{margin-top:14px!important;gap:12px!important}
+  body.hv-analysis-visible .result-buttons .result{
+    width:100%!important;max-width:none!important;height:86px!important;min-height:86px!important;
+    aspect-ratio:auto!important;border-radius:12px!important;font-size:40px!important
+  }
+  body.hv-analysis-visible .hv-analysis-start-row{
+    grid-template-columns:minmax(0,1.2fr) minmax(120px,.8fr) minmax(120px,.8fr)!important;
+    gap:10px!important;margin-top:12px!important
+  }
+  body.hv-analysis-visible .hv-required-games,
+  body.hv-analysis-visible .hv-analysis-start-row button{min-height:44px!important;height:44px!important}
+  body.hv-analysis-visible .tool-row{margin-top:10px!important;gap:10px!important}
+  body.hv-analysis-visible .tool-row button{padding:11px 12px!important;min-height:44px!important}
+
+  /* 右側標題與點數卡只使用橫向空間。 */
+  body.hv-analysis-visible .result-card .section-title.compact{
+    display:grid!important;grid-template-columns:minmax(170px,.72fr) minmax(0,1.28fr)!important;
+    gap:10px!important;align-items:center!important
+  }
+  body.hv-analysis-visible .hv-result-money.show{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;width:100%!important}
+  body.hv-analysis-visible .hv-result-money .money-box{min-height:50px!important;padding:7px 10px!important;border-radius:10px!important}
+  body.hv-analysis-visible .hv-result-money span{font-size:10px!important}
+  body.hv-analysis-visible .hv-result-money strong{font-size:21px!important;line-height:1.05!important}
+
+  /* 建議下注維持存在，但壓回一條緊湊資訊列。 */
+  body.hv-analysis-visible .hv-suggested-bet-card{margin:10px 0 0!important;padding:8px 12px!important;min-height:40px!important;border-radius:10px!important}
+  body.hv-analysis-visible .hv-suggested-bet-card strong{font-size:19px!important}
+
+  /* 分析結果比例回到原正式版，不允許等待文字換行。 */
+  body.hv-analysis-visible .decision-block{grid-template-columns:1.25fr .75fr!important;gap:10px!important;margin-top:10px!important}
+  body.hv-analysis-visible .decision,
+  body.hv-analysis-visible .confidence{padding:12px!important;min-height:120px!important}
+  body.hv-analysis-visible .decision-result-row{min-height:76px!important;padding:2px 8px!important;gap:10px!important}
+  body.hv-analysis-visible .decision.waiting-state .decision-result-row{justify-content:center!important}
+  body.hv-analysis-visible .decision.waiting-state #decisionValue,
+  body.hv-analysis-visible #decisionValue{font-size:46px!important;white-space:nowrap!important;word-break:keep-all!important;line-height:1!important}
+  body.hv-analysis-visible #confidenceValue{font-size:30px!important;white-space:nowrap!important;word-break:keep-all!important;line-height:1.08!important}
+  body.hv-analysis-visible .decision-percent{font-size:26px!important}
+
+  body.hv-analysis-visible .streak-grid{gap:8px!important;margin-top:9px!important}
+  body.hv-analysis-visible .streak-status,
+  body.hv-analysis-visible .streak-stat{min-height:58px!important;padding:7px 8px!important}
+  body.hv-analysis-visible .streak-status strong,
+  body.hv-analysis-visible .streak-stat strong{font-size:19px!important}
+  body.hv-analysis-visible .accuracy{gap:8px!important;margin-top:9px!important}
+  body.hv-analysis-visible .accuracy div{min-height:58px!important;padding:8px!important}
+  body.hv-analysis-visible .accuracy strong{font-size:20px!important}
+  body.hv-analysis-visible .bead-card{margin-top:16px!important;padding:18px!important}
+}
+
+@media(max-width:700px){
+  .hv-pack-actions{gap:7px}
+  .hv-pack-actions .hv-inline-stepper{gap:6px}
+  .hv-pack-actions .hv-inline-stepper button{width:30px;height:30px}
+  .hv-pack-actions .hv-hour-open{min-width:64px;padding:8px 10px}
+}
+/* v3.3.28 interaction refinements */
+.hv-suggested-bet-card{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:18px!important}
+.hv-suggested-main{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+.hv-suggested-main>span{font-size:18px!important;font-weight:800!important}
+.hv-suggested-main>strong{width:100%;text-align:center!important}
+.hv-skip-settle{display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap;color:#9aa0ad;font-size:13px;font-weight:800}
+.hv-skip-settle input{position:absolute;opacity:0;pointer-events:none}
+.hv-skip-box{width:24px;height:24px;border:1px solid rgba(255,255,255,.20);border-radius:6px;display:grid;place-items:center;background:#2b2f37;color:transparent;transition:.15s}
+.hv-skip-settle input:checked + .hv-skip-box{background:#25b56b;border-color:#25b56b;color:#fff}
+.hv-skip-settle input:checked ~ b{color:#50d78c}
+.hv-analysis-start-row .primary{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;line-height:1!important}
+.decision .decision-result-row{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}
+.decision .decision-result-row strong{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;width:100%}
+.bead-grid{min-height:336px}
+.bead-cell{min-height:50px}
+@media(max-width:760px){.hv-suggested-bet-card{grid-template-columns:1fr!important}.hv-skip-settle{justify-self:center}.bead-grid{min-height:0}}

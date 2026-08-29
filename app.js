@@ -72,7 +72,7 @@
 
   function showInitialWaitingState() {
     els.decisionCard.className = "decision waiting-state";
-    els.decision.textContent = "AI 待命中";
+    els.decision.textContent = "待命中";
     els.decisionPercent.textContent = "";
 
     els.confidence.textContent = "等待分析";
@@ -433,7 +433,8 @@
       // 歷史符合率：
       // 只表示「相同歷史序列中，下一個非和局結果為本次判定的比例」。
       // 它與右側信心度是兩個不同指標。
-      const historicalRate = Math.round((counts[outcome] / total) * 100);
+      const rawHistoricalRate = (counts[outcome] + 1) / (total + 2) * 100;
+      const historicalRate = Math.min(98, Math.round(rawHistoricalRate));
 
       // 信心度 v2.8：
       // 40% 歷史符合率 + 40% 資料充足度 + 20% 分析一致性。
@@ -582,6 +583,14 @@
   });
 
   window.HawkVisionAnalysisCore={
+    analyzeNow(){ return analyze(false); },
+    resetEvaluationStatsPreserveShoe(){
+      state.evaluations=state.rounds.map(()=>null);
+      state.correct=0; state.wrong=0;
+      renderAll(); saveSession();
+    },
+    resetShoe(){ startNewShoe(); },
+    setLookback(n){ const v=Math.max(1,Number(n)||6); els.lookback.value=String(v); saveSession(); },
     exportState(){return {rounds:[...state.rounds],analysisStarted:state.analysisStarted,pendingPrediction:state.pendingPrediction,evaluations:[...state.evaluations],correct:state.correct,wrong:state.wrong,lookback:els.lookback.value};},
     importState(saved){
       if(!saved||typeof saved!=="object")return false;

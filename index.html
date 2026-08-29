@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png?v=6">
   <link rel="shortcut icon" href="favicon.ico?v=6">
   <link rel="apple-touch-icon" href="hawkvision-app-icon.png?v=6">
-  <link rel="stylesheet" href="style.css?v=3.3.12">
+  <link rel="stylesheet" href="style.css?v=3.4.0">
 
 <style>
 #hvAuthCover{
@@ -53,8 +53,20 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
 .hv-inline-actions [data-cancel] span{display:inline!important;white-space:nowrap!important;word-break:keep-all!important;writing-mode:horizontal-tb!important}
 .hv-inline-actions [data-cancel]{white-space:nowrap!important;word-break:keep-all!important;writing-mode:horizontal-tb!important}
 </style>
+
+<style id="hv-v3319-entry-size-fix">
+@media(min-width:761px){
+  #hvEntryShell .hv-entry-card{
+    width:min(1180px,calc(100vw - 56px))!important;
+    max-width:none!important;
+    max-height:94vh!important;
+  }
+}
+</style>
+
 </head>
-<body><div id="hvAuthCover"><div class="hv-auth-card">正在載入 HawkVision…</div></div>
+<body>
+<div id="hvAuthCover"><div class="hv-auth-card">正在載入 HawkVision…</div></div>
 <main class="analysis-main app-shell">
     <header class="brand-bar">
       <div class="brand-lockup">
@@ -67,7 +79,7 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <span id="analysisIdentity" style="font-size:12px;opacity:.8">驗證登入中…</span>
-        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.3.12</span>
+        <span style="font-size:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px">Analysis v3.4.0</span>
         <button id="hvFunctionBtn" class="mode" type="button">功能使用</button>
         <div id="dbStatus" class="db-status waiting">資料庫尚未連線</div>
       </div>
@@ -80,7 +92,15 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
             <span class="eyebrow">INPUT</span>
             <h2>輸入目前牌局</h2>
           </div>
-          <div id="hvModeStatus" class="hv-mode-status" style="display:none"></div>
+          <div class="hv-input-head-actions">
+            <div id="hvModeStatus" class="hv-mode-status" style="display:none"></div>
+            <div class="hv-commission-inline">
+              <span>免佣</span>
+              <button id="hvCommissionInGame" class="hv-commission-toggle" type="button" aria-pressed="false">
+                <span class="on-label">ON</span><span class="off-label">OFF</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="result-buttons">
@@ -89,23 +109,10 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
           <button class="result tie" data-result="和" type="button">和</button>
         </div>
 
-        <div class="action-grid">
-          <label class="field">
-            <span>最近分析局數</span>
-            <select id="lookback">
-              <option value="3">最近 3 局</option>
-              <option value="4">最近 4 局</option>
-              <option value="5">最近 5 局</option>
-              <option value="6">最近 6 局</option>
-              <option value="7">最近 7 局</option>
-              <option value="8" selected>最近 8 局</option>
-              <option value="9">最近 9 局</option>
-              <option value="10">最近 10 局</option>
-              <option value="11">最近 11 局</option>
-              <option value="12">最近 12 局</option>
-            </select>
-          </label>
-          <button id="analyzeBtn" class="primary" type="button">分析下一局</button>
+        <div class="hv-analysis-start-row">
+          <div id="hvRequiredGames" class="hv-required-games">輸入有效局數 0/6</div>
+          <button id="hvStartAnalysis" class="primary" type="button" disabled>開始分析</button>
+          <button id="hvStartBetting" class="primary hv-bet-start" type="button" disabled>開始下注</button>
         </div>
 
         <div class="tool-row">
@@ -122,16 +129,21 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
             <h2>下一局分析結果</h2>
           </div>
           <div id="hvResultMoney" class="hv-result-money">
-            <div class="money-box"><span>目前本金</span><strong id="hvBankrollChip">—</strong></div>
-            <div class="money-box"><span>目前輸贏</span><strong id="hvProfitChip">—</strong></div>
+            <div class="money-box"><span>目前遊戲點數</span><strong id="hvBankrollChip">—</strong></div>
+            <div class="money-box"><span>本次點數輸贏</span><strong id="hvProfitChip">—</strong></div>
           </div>
+        </div>
+
+        <div class="hv-suggested-bet-card">
+          <div class="hv-suggested-main"><span>建議下注</span><strong id="hvSuggestedBet">等待判定</strong></div>
+          <label class="hv-skip-settle" for="hvSkipSettlement"><input id="hvSkipSettlement" type="checkbox"><span class="hv-skip-box">✓</span><b>跳過此局結算</b></label>
         </div>
 
         <div class="decision-block">
           <div id="decisionCard" class="decision neutral">
             <span>本次判定</span>
             <div class="decision-result-row">
-              <strong id="decisionValue">AI 待命中</strong>
+              <strong id="decisionValue">待命中</strong>
               <em id="decisionPercent" class="decision-percent"></em>
             </div>
           </div>
@@ -186,15 +198,13 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
   <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-card">
       <h3>開始新牌靴？</h3>
-      <p>目前牌局、珠盤路、分析結果與正確率都會清空。</p>
+      <p>目前牌局、珠盤路與本鞋分析資料會清空；模式、目前遊戲點數與本次點數輸贏會保留。</p>
       <div class="modal-actions">
         <button id="cancelNewShoe" class="secondary" type="button">取消</button>
         <button id="confirmNewShoe" class="danger" type="button">開始新牌靴</button>
       </div>
     </div>
   </div>
-
-
   <div id="hvEntryShell">
     <div class="hv-entry-card">
       <h2 id="hvEntryTitle">分析模式選擇</h2>
@@ -206,21 +216,24 @@ body.hv-time-locked .analysis-main button:not(#hvFunctionBtn),body.hv-time-locke
   </div>
   <div id="hvFunctionPopover" class="hv-function-popover">
     <div id="hvMenuRemainingTime" class="hv-menu-time">00:00:00</div>
-    <button data-hv-fn="hours" type="button">時數包</button>
-    <button data-hv-fn="mode" type="button">變更模式</button>
-    <button data-hv-fn="bankroll" type="button">變更初始本金</button>
-    <button data-hv-fn="betting" type="button">變更配注方式</button>
-    <button data-hv-fn="platforms" type="button" style="display:none">返回平台列表</button>
+    <button data-hv-fn="settings" data-hv-role="member" type="button">變更分析設定</button>
+    <button data-hv-fn="hours" type="button">我的時數包</button>
+    <button data-hv-fn="mode" data-hv-role="management" type="button">變更模式</button>
+    <button data-hv-fn="bankroll" data-hv-role="management" type="button">變更初始本金</button>
+    <button data-hv-fn="betting" data-hv-role="management" type="button">變更配注方式</button>
+    <button data-hv-fn="platforms" data-hv-role="management" type="button">返回平台列表</button>
     <button data-hv-fn="logout" class="danger" type="button">登出</button>
   </div>
-  <div id="hvLockBanner" class="hv-lock-banner">時數不足，請聯繫上層</div>
+  <div id="hvLockBanner" class="hv-lock-banner">時數不足，請開啟可用時數包</div>
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="config.js?v=3.3.12"></script>
+  <div aria-hidden="true" style="display:none"><select id="lookback"><option value="6" selected>6</option><option value="7">7</option><option value="9">9</option><option value="11">11</option></select><button id="analyzeBtn" type="button">分析</button></div>
+
+  <script src="config.js?v=3.4.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3.3.12"></script>
-  <script src="auth-gate.js?v=3.3.12"></script>
-  <script src="analysis-session.js?v=3.3.12"></script>
+  <script src="app.js?v=3.4.0"></script>
+  <script src="auth-gate.js?v=3.4.0"></script>
+  <script src="analysis-session.js?v=3.4.0"></script>
 </body>
 </html>
