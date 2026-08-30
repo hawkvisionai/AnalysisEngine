@@ -1333,10 +1333,10 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
   border-color:#4d425e!important;
 }
 
-/* Functional colors: review road = teal, undo = cool slate. */
+/* Functional colors: review road = deep ocean blue, undo = cool slate. */
 body.hv-analysis-visible .hv-road-toggle{
-  background:linear-gradient(180deg,#2d817d 0%,#246b70 100%)!important;
-  border-color:rgba(111,225,214,.58)!important;
+  background:linear-gradient(180deg,#245A82 0%,#1E4A6B 100%)!important;
+  border-color:rgba(93,174,226,.58)!important;
   color:#fff!important;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)!important;
 }
