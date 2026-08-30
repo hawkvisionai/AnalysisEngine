@@ -1395,3 +1395,22 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
   }
   body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:26px!important}
 }
+
+/* ===== v3.4.9 desktop bead-road cell containment fix =====
+   Desktop only. Keep the phone bead-road layout unchanged. */
+@media screen and (min-width:901px){
+  body.hv-analysis-visible .bead-grid .bead-cell{
+    min-height:0!important;
+    height:auto!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+  body.hv-analysis-visible .bead-grid .bead{
+    width:min(70%,38px)!important;
+    max-width:38px!important;
+    min-width:0!important;
+    font-size:20px!important;
+    line-height:1!important;
+    box-sizing:border-box!important;
+  }
+}
