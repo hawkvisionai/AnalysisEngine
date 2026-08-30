@@ -1321,3 +1321,77 @@ body.hv-basic-mode .hv-commission-inline{display:none!important}
   }
   body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:27px!important}
 }
+
+/* ===== v3.4.7 setup state visuals + road toolbar refinement ===== */
+/* Locked setup stages keep the same functional lock, but no longer turn black. */
+#hvEntryShell .hv-fixed-setup .hv-setup-section.locked{
+  background:#2a2336!important;
+  border-color:#4d425e!important;
+}
+#hvEntryShell .hv-warning-slot.locked{
+  background:#2a2336!important;
+  border-color:#4d425e!important;
+}
+
+/* Functional colors: review road = teal, undo = cool slate. */
+body.hv-analysis-visible .hv-road-toggle{
+  background:linear-gradient(180deg,#2d817d 0%,#246b70 100%)!important;
+  border-color:rgba(111,225,214,.58)!important;
+  color:#fff!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)!important;
+}
+body.hv-analysis-visible #undoBtn{
+  background:linear-gradient(180deg,#53627f 0%,#444f6b 100%)!important;
+  border-color:rgba(160,179,220,.48)!important;
+  color:#fff!important;
+}
+body.hv-analysis-visible #undoBtn:disabled,
+body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
+
+/* Desktop road states are intentionally different.
+   Open road: keep required-games visible and full-size.
+   Closed road: remove it visually and enlarge the three actionable controls. */
+@media screen and (min-width:901px){
+  body.hv-analysis-visible.hv-road-open .hv-analysis-start-row{
+    grid-template-columns:2fr 3fr 3fr 2fr!important;
+  }
+  body.hv-analysis-visible.hv-road-open .hv-required-games{
+    display:flex!important;
+    min-width:0!important;
+    width:100%!important;
+    padding:0 12px!important;
+    font-size:14px!important;
+    letter-spacing:0!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+  }
+  body.hv-analysis-visible.hv-road-closed .hv-analysis-start-row{
+    grid-template-columns:3.5fr 3.5fr 3fr!important;
+  }
+  body.hv-analysis-visible.hv-road-closed .hv-required-games{
+    display:none!important;
+  }
+}
+
+/* Phone setup only: reclaim the dead space in stage 1 and stage 2.
+   Hours and the analysis workspace are not touched. */
+@media screen and (max-width:760px){
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{
+    grid-template-rows:132px 62px 132px minmax(92px,1fr) 136px!important;
+    gap:5px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section:nth-child(1),
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-setup-section:nth-child(2){
+    align-self:start!important;
+    height:100%!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:28px!important}
+}
+
+@media screen and (max-width:760px) and (max-height:720px){
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup{
+    grid-template-rows:124px 58px 124px minmax(78px,1fr) 126px!important;
+    gap:4px!important;
+  }
+  body.hv-setup-visible #hvEntryShell .hv-fixed-setup .hv-choice{min-height:26px!important}
+}
