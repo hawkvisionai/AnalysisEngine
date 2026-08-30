@@ -1397,7 +1397,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 }
 
 /* ===== v3.4.9 desktop bead-road cell containment fix =====
-   Desktop only. Keep the phone bead-road layout unchanged. */
+   Superseded by v3.4.10 below. */
 @media screen and (min-width:901px){
   body.hv-analysis-visible .bead-grid .bead-cell{
     min-height:0!important;
@@ -1412,5 +1412,37 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
     font-size:20px!important;
     line-height:1!important;
     box-sizing:border-box!important;
+  }
+}
+
+
+/* ===== v3.4.10 desktop bead-road hard containment =====
+   Fix RC10 breakpoint miss: desktop/tablet-width road circles are sized by row height,
+   not by the much wider column width. Phone layout (<=800px) remains untouched. */
+@media screen and (min-width:801px){
+  body.hv-analysis-visible .bead-grid .bead-cell{
+    position:relative!important;
+    display:grid!important;
+    place-items:center!important;
+    min-width:0!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+    padding:3px!important;
+  }
+  body.hv-analysis-visible .bead-grid .bead{
+    width:34px!important;
+    height:34px!important;
+    max-width:calc(100% - 6px)!important;
+    max-height:calc(100% - 6px)!important;
+    min-width:0!important;
+    min-height:0!important;
+    aspect-ratio:1 / 1!important;
+    margin:0!important;
+    font-size:18px!important;
+    line-height:1!important;
+    box-sizing:border-box!important;
+    place-self:center!important;
+    overflow:hidden!important;
   }
 }
