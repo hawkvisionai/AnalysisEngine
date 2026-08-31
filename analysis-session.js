@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.22";
+const VERSION="3.4.23";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -112,6 +112,8 @@ function advanceCorePause(win,roundNumber=null){
  }
 }
 function currentInternalPrediction(){const p=window.HawkVisionAnalysisCore?.getPendingPrediction?.();return ["莊","閒"].includes(p)?p:null}
+// Global main-bet invariant for every analysis mode / play method / staking method:
+// tie never settles or consumes an existing Banker/Player decision; the same decision and wager stage continue to the next non-tie hand.
 function hasBettableDecision(){const p=currentInternalPrediction();return (p==="莊"||p==="閒")&&state.currentPublicBetAllowed===true}
 function displayedSuggested(){if(!state.bettingActive)return "—";if(!hasBettableDecision())return "本局不下注";if(state.points<100||state.skippedSetup)return "—";const wager=suggestedBetPoints();if(wager>state.points)return "本金不足";return `${fmt(wager)} 點`}
 function setupComplete(){return !!(state.mode&&state.family&&state.method)}
@@ -213,11 +215,22 @@ function settleRound(result){
  if(currentRound>=66)return;
  const predicted=currentInternalPrediction(),skip=!!$("hvSkipSettlement")?.checked;
  const roundNumber=currentRound+1,pauseBefore=JSON.parse(JSON.stringify(state.corePause||freshCorePause()));
- const signal=!!predicted&&result!=="和",allowedBefore=signal&&hasBettableDecision();
 
  // 每一個實際輸入局，在任何模式／打法／配注下，都先保存「輸入前完整快照」。
  state.officialHistory.push(captureRoundSnapshot(roundNumber));
 
+ // 主注莊/閒硬規則：和局不結算、不消耗判定、不推進配注、不推進停止核心。
+ // 若和局前已有可公開的莊/閒判定，判定與該階段建議下注原封不動延續到下一個非和局。
+ if(result==="和"){
+   state.lastRoundHadSignal=false;
+   state.lastRoundEvaluationAllowed=false;
+   resetSkip();
+   if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();
+   queueSave();
+   return
+ }
+
+ const signal=!!predicted,allowedBefore=signal&&hasBettableDecision();
  state.lastRoundHadSignal=signal;state.lastRoundEvaluationAllowed=!!(state.analysisActive&&allowedBefore);
  if(!signal){state.currentPublicBetAllowed=false;resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave();return}
  const win=predicted===result;
