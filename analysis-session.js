@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.11";
+const VERSION="3.4.13";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -16,16 +16,16 @@ const state={
  packQty:{},hourInventory:[],hourHistory:[],settingsSnapshot:null,pendingSettingsCommit:false,
  officialHistory:[],progressionIndex:0,skipSettlement:false,deviceToken:"",
  setupComplete:false,lastHoursGeneration:0,lastPasswordGeneration:0,passwordClaim:false,
- actualMode:"basic",modeNotice:"",unitPoints:0,corePause:{active:true,waiting:false,waitLeft:0},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false
+ actualMode:"basic",modeNotice:"",unitPoints:0,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false
 };
 let tickTimer=null,pollTimer=null,saveTimer=null,lastRenderedSecond=null;
 const methodInfo={
  standard:{label:"標準均注",units:30,historical:20,minGames:6},
  advanced30:{label:"均注進階・30注",units:30,historical:20,minGames:6},
  advanced60:{label:"均注進階・60注",units:60,historical:40,minGames:6},
- steady:{label:"穩健",units:100,historical:67,minGames:6},
- balanced:{label:"平衡",units:145,historical:95,minGames:6},
- aggressive:{label:"進取",units:185,historical:123,minGames:6}
+ steady:{label:"穩健",units:100,historical:60.15,minGames:6},
+ balanced:{label:"平衡",units:170,historical:111.00,minGames:6},
+ aggressive:{label:"進取",units:170,historical:111.20,minGames:6}
 };
 function cookieGet(name){const p=name+"=";const r=document.cookie.split("; ").find(v=>v.startsWith(p));return r?decodeURIComponent(r.slice(p.length)):""}
 function cookieSet(name,value){document.cookie=`${name}=${encodeURIComponent(value)}; Domain=.hawkvisionai.com; Path=/; Max-Age=31536000; SameSite=Lax; Secure`}
@@ -48,9 +48,52 @@ function progressionType(){if(["advanced30","advanced60"].includes(state.method)
 function progressionMultiplier(){const t=progressionType(),i=Math.max(0,state.progressionIndex|0);if(t==="flat")return 1;if(t==="loss"){const seq=state.method==="steady"?[1,2,4,8,16]:[1,3,7,15,31];return seq[Math.min(i,seq.length-1)]}const step=i+1;return step%2===1?Math.floor((step+1)/2):3*Math.floor((step+1)/2)}
 function suggestedBetPoints(){return Math.max(100,baseUnit()*progressionMultiplier())}
 function usesCoreStop(){return ["advanced30","steady","balanced","aggressive"].includes(state.method)}
-function resetCorePause(){state.corePause={active:true,waiting:false,waitLeft:0}}
-function coreBetAllowed(){return !usesCoreStop()||state.corePause?.active===true}
-function advanceCorePause(win){if(!usesCoreStop()||typeof win!=="boolean")return;const s=state.corePause||(state.corePause={active:true,waiting:false,waitLeft:0});if(s.active){if(!win){s.active=false;s.waiting=true;s.waitLeft=0}}else if(s.waiting){if(win){s.waiting=false;s.waitLeft=1}}else if(s.waitLeft>0){s.waitLeft--;if(s.waitLeft===0)s.active=true}}
+function stopVariant(){return state.method==="balanced"?"D6_G30":(["advanced30","steady","aggressive"].includes(state.method)?"D9_C5":"A")}
+function freshCorePause(){return {active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false}}
+function normalizeCorePause(x){
+ const d=freshCorePause(),s=x&&typeof x==="object"?x:{};
+ d.active=s.active!==false;d.waiting=!!s.waiting;d.waitLeft=Math.max(0,Number(s.waitLeft||0));
+ d.pauseStartRound=Number.isFinite(Number(s.pauseStartRound))?Number(s.pauseStartRound):null;
+ d.shoeStoppedHands=Math.max(0,Number(s.shoeStoppedHands||0));d.stopDisabled=!!s.stopDisabled;
+ return d
+}
+function resetCorePause(){state.corePause=freshCorePause()}
+function completedRoundCount(){return Math.max(0,Number($("roundCount")?.textContent||0))}
+function pausedPhysicalHands(s=state.corePause){if(!s||s.pauseStartRound==null)return 0;return Math.max(0,completedRoundCount()-Number(s.pauseStartRound))}
+function finalizeStoppedSegment(s=state.corePause){
+ if(!s||s.pauseStartRound==null)return;
+ s.shoeStoppedHands=Math.max(0,Number(s.shoeStoppedHands||0))+pausedPhysicalHands(s);
+ s.pauseStartRound=null;
+ if(stopVariant()==="D6_G30"&&s.shoeStoppedHands>=30)s.stopDisabled=true
+}
+function maybeForceCoreResume(){
+ if(!usesCoreStop())return;
+ const s=state.corePause||(state.corePause=freshCorePause());
+ if(s.stopDisabled){s.active=true;s.waiting=false;s.waitLeft=0;return}
+ if(s.active)return;
+ const seg=pausedPhysicalHands(s);
+ if(stopVariant()==="D9_C5"&&seg>=5){s.active=true;s.waiting=false;s.waitLeft=0}
+ if(stopVariant()==="D6_G30"&&Number(s.shoeStoppedHands||0)+seg>=30){s.active=true;s.waiting=false;s.waitLeft=0;s.stopDisabled=true}
+}
+function coreBetAllowed(){
+ if(!usesCoreStop())return true;
+ const s=state.corePause||(state.corePause=freshCorePause());
+ maybeForceCoreResume();
+ if(s.active&&s.pauseStartRound!=null)finalizeStoppedSegment(s);
+ return s.active===true
+}
+function advanceCorePause(win,roundNumber=null){
+ if(!usesCoreStop()||typeof win!=="boolean")return;
+ const s=state.corePause||(state.corePause=freshCorePause());
+ if(s.stopDisabled){s.active=true;s.waiting=false;s.waitLeft=0;s.pauseStartRound=null;return}
+ if(s.active){
+   if(!win){s.active=false;s.waiting=true;s.waitLeft=0;s.pauseStartRound=Math.max(1,Number(roundNumber)||completedRoundCount()+1)}
+ }else if(s.waiting){
+   if(win){s.waiting=false;s.waitLeft=1}
+ }else if(s.waitLeft>0){
+   s.waitLeft--;if(s.waitLeft===0)s.active=true
+ }
+}
 function currentInternalPrediction(){const p=window.HawkVisionAnalysisCore?.getPendingPrediction?.();return ["莊","閒"].includes(p)?p:null}
 function displayedSuggested(){if(!state.bettingActive)return "—";if(!currentInternalPrediction())return "本局不下注";if(!coreBetAllowed())return "本局不下注";if(state.points<100||state.skippedSetup)return "—";return `${fmt(suggestedBetPoints())} 點`}
 function setupComplete(){return !!(state.mode&&state.family&&state.method)}
@@ -75,7 +118,7 @@ function setCommission(on){state.noCommission=state.mode==="basic"?false:!!on;["
 function renderModeStatus(){const el=$("hvModeStatus");if(!el)return;const actual=state.actualMode||state.mode||"basic";let text=modeName(actual),warn=false;if(state.modeNotice){text=state.modeNotice;warn=true}el.textContent=text;el.style.display="block";el.classList.toggle("warn",warn);el.classList.toggle("ok",!warn)}
 window.HawkVisionModeState={setActualMode(mode,notice=""){state.actualMode=["basic","counting","full"].includes(mode)?mode:"basic";state.modeNotice=String(notice||"");renderModeStatus();queueSave()},markIncomplete(){if(state.mode==="counting"){state.actualMode="basic";state.modeNotice="輸入資料不完整，已切換成基礎模式"}else if(state.mode==="full"){state.actualMode="basic";state.modeNotice="完整資料輸入中，已切換成基礎模式"}renderModeStatus()},restoreFull(){if(state.mode==="full"){state.actualMode="full";state.modeNotice="";renderModeStatus()}},reset(){state.actualMode=state.mode||"basic";state.modeNotice="";renderModeStatus()}};
 function warningData(){const i=info();if(!i||!i.historical||state.points<100)return null;const prepared=state.points/100,base=i.historical;if(prepared<=base*1.10)return ["red","準備點數低於標準太多","目前準備點數已接近或低於此打法的歷史風險需求，安全緩衝明顯不足。建議增加準備點數或更換其他打法。"];if(prepared<=base*1.25)return ["orange","準備點數偏低","目前仍保有部分緩衝，但低於系統建議標準，遇到較大波動時承受能力較低。"];if(prepared<=base*1.40)return ["yellow","準備點數略低於建議","目前已有一定安全緩衝，但尚未達到較完整的安全緩衝。"];return null}
-function snapshotSettings(){return {mode:state.mode,family:state.family,method:state.method,points:state.points,initialPoints:state.initialPoints,profit:state.profit,skippedSetup:state.skippedSetup,analysisActive:state.analysisActive,bettingActive:state.bettingActive,progressionIndex:state.progressionIndex,noCommission:state.noCommission,actualMode:state.actualMode,modeNotice:state.modeNotice,unitPoints:state.unitPoints,corePause:JSON.parse(JSON.stringify(state.corePause||{active:true,waiting:false,waitLeft:0}))}}
+function snapshotSettings(){return {mode:state.mode,family:state.family,method:state.method,points:state.points,initialPoints:state.initialPoints,profit:state.profit,skippedSetup:state.skippedSetup,analysisActive:state.analysisActive,bettingActive:state.bettingActive,progressionIndex:state.progressionIndex,noCommission:state.noCommission,actualMode:state.actualMode,modeNotice:state.modeNotice,unitPoints:state.unitPoints,corePause:JSON.parse(JSON.stringify(state.corePause||freshCorePause()))}}
 function restoreSettingsSnapshot(){const x=state.settingsSnapshot;if(!x)return;Object.assign(state,x);state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.manualEdited=false}
 function renderSetup(){
  showShell();setErr("");
@@ -121,7 +164,7 @@ function resetOfficialStats(){window.HawkVisionAnalysisCore?.resetEvaluationStat
 function resetSkip(){state.skipSettlement=false;const c=$("hvSkipSettlement");if(c)c.checked=false}
 function settleRound(result){
  const predicted=currentInternalPrediction(),skip=!!$("hvSkipSettlement")?.checked;
- const roundNumber=Math.max(1,Number($("roundCount")?.textContent||0)+1),pauseBefore=JSON.parse(JSON.stringify(state.corePause||{active:true,waiting:false,waitLeft:0}));
+ const roundNumber=Math.max(1,Number($("roundCount")?.textContent||0)+1),pauseBefore=JSON.parse(JSON.stringify(state.corePause||freshCorePause()));
  const signal=!!predicted&&result!=="和",allowedBefore=signal&&coreBetAllowed();
  state.lastRoundHadSignal=signal;state.lastRoundEvaluationAllowed=!!(state.analysisActive&&allowedBefore);
  if(state.analysisActive||state.bettingActive)state.officialHistory.push({roundNumber,points:state.points,profit:state.profit,progressionIndex:state.progressionIndex,skipSettlement:skip,corePause:pauseBefore,analysisActive:state.analysisActive,bettingActive:state.bettingActive});
@@ -135,10 +178,10 @@ function settleRound(result){
    else if(t==="win")state.progressionIndex=win?state.progressionIndex+1:0;
    else state.progressionIndex=0;
  }
- if(state.analysisActive)advanceCorePause(win);
+ if(state.analysisActive)advanceCorePause(win,roundNumber);
  updatePointCards();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave()
 }
-function restoreUndoPoints(){const remaining=Math.max(0,Number($("roundCount")?.textContent||0));let restored=null;while(state.officialHistory.length&&Number(state.officialHistory[state.officialHistory.length-1].roundNumber)>remaining){restored=state.officialHistory.pop()}if(restored){state.points=restored.points;state.profit=restored.profit;state.progressionIndex=restored.progressionIndex;state.corePause=restored.corePause&&typeof restored.corePause==="object"?JSON.parse(JSON.stringify(restored.corePause)):{active:true,waiting:false,waitLeft:0};state.lastRoundEvaluationAllowed=false;state.lastRoundHadSignal=false}resetSkip();updatePointCards();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave()}
+function restoreUndoPoints(){const remaining=Math.max(0,Number($("roundCount")?.textContent||0));let restored=null;while(state.officialHistory.length&&Number(state.officialHistory[state.officialHistory.length-1].roundNumber)>remaining){restored=state.officialHistory.pop()}if(restored){state.points=restored.points;state.profit=restored.profit;state.progressionIndex=restored.progressionIndex;state.corePause=normalizeCorePause(restored.corePause);state.lastRoundEvaluationAllowed=false;state.lastRoundHadSignal=false}resetSkip();updatePointCards();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave()}
 function setupStartButtons(){setupRoadToggle();$("hvStartAnalysis")?.addEventListener("click",async()=>{if(state.bettingActive||state.analysisActive)return;state.analysisActive=true;setRoadVisible(false);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();await window.HawkVisionAnalysisCore?.analyzeNow?.();queueSave()});$("hvStartBetting")?.addEventListener("click",async()=>{if(state.bettingActive)return;const hadAnalysis=state.analysisActive;state.analysisActive=true;state.bettingActive=true;setRoadVisible(false);state.progressionIndex=0;state.officialHistory=[];if(!hadAnalysis)resetCorePause();resetOfficialStats();if(!hadAnalysis)await window.HawkVisionAnalysisCore?.analyzeNow?.();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();syncStartControls();queueSave()});document.querySelectorAll("[data-result]").forEach(btn=>btn.addEventListener("click",()=>settleRound(btn.dataset.result),true));$("undoBtn")?.addEventListener("click",()=>setTimeout(()=>{restoreUndoPoints();syncStartControls()},0));$("confirmNewShoe")?.addEventListener("click",()=>setTimeout(()=>{setRoadVisible(true);state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;state.officialHistory=[];resetCorePause();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();queueSave()},0));$("hvSkipSettlement")?.addEventListener("change",e=>{state.skipSettlement=!!e.target.checked});[$("roundCount"),$("bankerTotal"),$("playerTotal")].filter(Boolean).forEach(el=>new MutationObserver(syncStartControls).observe(el,{childList:true,subtree:true,characterData:true}));syncStartControls()}
 function renderPasswordClaim(){state.passwordClaim=true;showShell();hideAnalysis();setErr("");$("hvEntryTitle").textContent="首次登入｜設定新密碼";$("hvEntryHint").textContent="第一次登入必須先設定自己的新密碼；設定成功後系統會登出，請使用新密碼重新登入。";$("hvEntryBody").innerHTML='<div class="hv-field"><label>新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword">顯示</button></div></div><div class="hv-field"><label>再次輸入新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword2" type="password" autocomplete="new-password" placeholder="再次輸入新密碼"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword2">顯示</button></div></div><button id="hvClaimLogout" class="hv-claim-logout" type="button">登出並返回登入</button>';$("hvClaimLogout")?.addEventListener("click",()=>window.hvGlobalLogout?.());$("hvEntryBody").querySelectorAll("[data-password-target]").forEach(btn=>btn.addEventListener("click",()=>{const input=$(btn.dataset.passwordTarget);if(!input)return;const showing=input.type==="text";input.type=showing?"password":"text";btn.textContent=showing?"顯示":"隱藏"}));$("hvEntryBack").style.display="none";$("hvEntrySkip").style.display="none";$("hvEntryNext").style.display="inline-block";$("hvEntryNext").textContent="設定新密碼並重新登入";$("hvEntryNext").onclick=submitPasswordClaim}
 async function submitPasswordClaim(){const p1=$("hvNewPassword")?.value||"",p2=$("hvNewPassword2")?.value||"";if(p1.length<8){setErr("新密碼至少需要 8 個字元");return}if(p1!==p2){setErr("兩次輸入的新密碼不一致");return}const {data:{session}}=await client.auth.getSession();if(!session?.access_token){setErr("登入狀態已失效，請重新登入");return}$("hvEntryNext").disabled=true;try{const res=await fetch(ADMIN_API+"/claim-password",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({new_password:p1})});const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok)throw new Error(d.error||"密碼設定失敗");const {data:verify}=await client.from("profiles").select("must_change_password").eq("id",session.user.id).maybeSingle();if(verify?.must_change_password===true)throw new Error("密碼已送出但首次登入狀態尚未解除，請稍後再試");sessionStorage.setItem("hv-force-login-message","密碼設定成功，請使用新密碼重新登入");await window.hvGlobalLogout?.()}catch(e){setErr(e.message||String(e));$("hvEntryNext").disabled=false}}
@@ -152,7 +195,7 @@ window.HawkVisionSessionPolicy={
 };
 async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_token:state.deviceToken,p_client_name:"analysis"})}
 async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){if(d?.active_until)state.activeUntil=d.active_until;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;await renderHours();setErr("所有時數已被清除，請聯繫上層")}}}catch(e){console.warn("analysis live status",e)}}
-function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=b.family||null;state.method=b.method||null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=b.core_pause&&typeof b.core_pause==="object"?{active:b.core_pause.active!==false,waiting:!!b.core_pause.waiting,waitLeft:Math.max(0,Number(b.core_pause.waitLeft||0))}:{active:true,waiting:false,waitLeft:0};state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.skippedSetup=!!b.skipped_setup}
+function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=b.family||null;state.method=b.method||null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.skippedSetup=!!b.skipped_setup}
 async function boot(){hideAnalysis();const {data:{session}}=await client.auth.getSession();if(!session?.user)return;state.user=session.user;const {data:profile}=await client.from("profiles").select("must_change_password").eq("id",session.user.id).maybeSingle();if(profile?.must_change_password===true){renderPasswordClaim();return}state.deviceToken=token();await claimDevice();const entry=await rpc("hv_analysis_entry_v1",{p_device_token:state.deviceToken});state.role=entry?.business_role||"";state.isMember=state.role==="member";state.modes=state.isMember?(entry?.modes||{basic:true,counting:false,full:false}):{basic:true,counting:true,full:true};state.activeUntil=entry?.active_until||null;state.lastHoursGeneration=Number(entry?.hours_generation||0);state.lastPasswordGeneration=Number(entry?.password_generation||0);hydrate(entry?.settings||{});setupMenu();setupStartButtons();$("hvCommissionInGame")?.addEventListener("click",()=>setCommission(!state.noCommission));window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());if(!state.isMember){state.setupComplete=false;state.mode=null;state.family=null;state.method=null;state.points=0;state.initialPoints=0;state.profit=0;state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;state.officialHistory=[];window.HawkVisionAnalysisCore?.resetAnalysis?.();renderSetup();saveRuntime({}).catch(()=>{})}else if(state.setupComplete&&calcRemaining()>0){if(entry?.analysis_state)window.HawkVisionAnalysisCore?.importState?.(entry.analysis_state);showAnalysis()}else{if(state.setupComplete&&calcRemaining()<=0){await renderHours()}else renderSetup()}updateTimeUI();const scheduleClock=()=>{updateTimeUI();syncStartControls();const delay=Math.max(80,1000-(Date.now()%1000)+20);tickTimer=setTimeout(scheduleClock,delay)};scheduleClock();pollTimer=setInterval(poll,POLL_MS)}
 const wait=setInterval(()=>{if(document.body.classList.contains("hv-auth-ready")){clearInterval(wait);boot().catch(e=>{console.error(e);showShell();hideAnalysis();setErr("分析入口初始化失敗："+(e.message||e))})}},50);
 })();
