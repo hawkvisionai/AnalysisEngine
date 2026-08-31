@@ -202,6 +202,60 @@
     if (els.accuracy) els.accuracy.classList.remove("is-waiting");
   }
 
+  function captureExactSnapshot() {
+    return {
+      rounds:[...state.rounds],
+      analysisStarted:state.analysisStarted,
+      pendingPrediction:state.pendingPrediction,
+      evaluations:[...state.evaluations],
+      correct:state.correct,
+      wrong:state.wrong,
+      lookback:els.lookback.value,
+      view:{
+        decisionText:els.decision.textContent,
+        decisionPercent:els.decisionPercent.textContent,
+        decisionClass:els.decisionCard.className,
+        confidenceText:els.confidence.textContent,
+        confidenceClass:els.confidence.className,
+        warningClass:els.warning.className
+      }
+    };
+  }
+
+  function restoreExactSnapshot(saved) {
+    if (!saved || typeof saved !== "object") return false;
+    state.isAnalyzing=false;
+    state.rounds=Array.isArray(saved.rounds)?saved.rounds.filter(x=>["莊","閒","和"].includes(x)).slice(0,66):[];
+    state.analysisStarted=Boolean(saved.analysisStarted);
+    state.pendingPrediction=["莊","閒"].includes(saved.pendingPrediction)?saved.pendingPrediction:null;
+    state.evaluations=Array.isArray(saved.evaluations)?saved.evaluations.slice(0,state.rounds.length):[];
+    while(state.evaluations.length<state.rounds.length)state.evaluations.push(null);
+    state.correct=Math.max(0,Number(saved.correct||0));
+    state.wrong=Math.max(0,Number(saved.wrong||0));
+    if(saved.lookback&&els.lookback.querySelector(`option[value="${saved.lookback}"]`))els.lookback.value=String(saved.lookback);
+
+    renderAll();
+
+    const view=saved.view&&typeof saved.view==="object"?saved.view:null;
+    if(view){
+      els.decision.textContent=view.decisionText??"—";
+      els.decisionPercent.textContent=view.decisionPercent??"";
+      els.decisionCard.className=view.decisionClass||"decision neutral";
+      els.confidence.textContent=view.confidenceText??"—";
+      els.confidence.className=view.confidenceClass||"";
+      els.warning.className=view.warningClass||"warning hidden";
+    }else if(state.analysisStarted){
+      resetAnalysisDisplay();
+    }else{
+      showInitialWaitingState();
+    }
+
+    els.analyzeBtn.disabled=false;
+    document.querySelectorAll("[data-result]").forEach(button=>{button.disabled=false});
+    saveSession();
+    return true;
+  }
+
   function saveSession() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
@@ -525,6 +579,7 @@
 
       if (!total) {
         state.pendingPrediction = null;
+        window.HawkVisionSessionPolicy?.clearPublicSignal?.();
         showNoSignalState();
         refreshSuggestedBet();
         saveSession();
@@ -589,6 +644,7 @@
     } catch (error) {
       // 會員端不顯示技術錯誤或歷史搜尋細節。
       state.pendingPrediction = null;
+      window.HawkVisionSessionPolicy?.clearPublicSignal?.();
       showNoSignalState();
       refreshSuggestedBet();
       setDbStatus(error?.message?.includes("57014") || error?.message?.includes("statement timeout") ? "歷史分析資料正在逾時，請執行 v3.1 SQL 優化" : "資料庫連線或函式有誤", "error");
@@ -637,6 +693,11 @@
 
   function undo() {
     if (state.isAnalyzing) return;
+
+    if (window.HawkVisionSessionPolicy?.undoLastRound?.() === true) {
+      showToast("已撤銷上一局");
+      return;
+    }
 
     if (!state.rounds.length) {
       showToast("目前沒有可撤銷的牌局");
@@ -692,6 +753,8 @@
   });
 
   window.HawkVisionAnalysisCore={
+    captureExactSnapshot(){return captureExactSnapshot();},
+    restoreExactSnapshot(saved){return restoreExactSnapshot(saved);},
     setStrategy(method){ state.strategyMethod = method || null; },
     getPendingPrediction(){ return state.pendingPrediction; },
     analyzeNow(){ return analyze(false); },
