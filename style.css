@@ -535,7 +535,7 @@ body:not(.brand-intro-active) .app-shell{
 .hv-entry-actions #hvEntryBack{display:none!important}
 .hv-entry-actions button{min-height:46px}
 #hvEntryNext{font-size:16px}
-#hvEntrySkip{display:inline-block!important}
+#hvEntrySkip{display:none!important}
 .hv-input-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .hv-commission-inline{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(35,29,48,.65)}
 .hv-commission-inline>span{font-size:12px;color:#c8bfd3;font-weight:900}
