@@ -163,23 +163,21 @@
     const authClient=window.hvAnalysisAuthClient;
     const {data:{session:currentAuthSession}}=authClient?await authClient.auth.getSession():{data:{session:null}};
     const authKey=currentAuthSession?.user?.id||"";
+
     if(state._reverseD9AuthKey!==authKey){
       state._reverseD9AuthKey=authKey;
       state._reverseD9StructMap=null;
+      state._reverseD9HistoryShoes=null;
       state._reverseD9Loading=null;
     }
-    if(state._reverseD9StructMap instanceof Map && state._reverseD9StructMap.size>0){
-      return state._reverseD9StructMap;
+    if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
+      return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
     }
     if(state._reverseD9Loading)return state._reverseD9Loading;
 
     state._reverseD9Loading=(async()=>{
       const hc=window.hvAnalysisAuthClient;
       if(!hc)throw new Error("登入資料庫連線尚未完成");
-
-      // 研究測試頁是在登入後，以同一個已驗證 client 查詢 games。
-      // 正式逆平也必須使用相同身份，不能另建匿名 client，
-      // 否則 RLS / 正式資料可見範圍可能不同，會造成 D9 訊號完全偏掉。
       const {data:{session:authSession}}=await hc.auth.getSession();
       if(!authSession?.access_token)throw new Error("登入狀態已失效，無法讀取正式分析資料");
 
@@ -200,52 +198,93 @@
         const w=normalizeWinner(g.winner);
         if(!w)continue;
         if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);
-        by.get(g.shoe_id).push({...g,_winner:w});
+        by.get(g.shoe_id).push({
+          shoe_id:g.shoe_id,
+          game_number:Number(g.game_number||0),
+          winner:w
+        });
       }
 
+      const shoes=[];
       const map=new Map();
-      for(const games of by.values()){
-        games.sort((a,b)=>Number(a.game_number||0)-Number(b.game_number||0));
-        const physical=games.map(g=>({code:outcomeCodeWithTie(g._winner),winner:g._winner})).filter(x=>x.code);
-        for(let j=9;j<physical.length;j++){
-          const sig=runSig(physical.slice(j-9,j).map(x=>x.code));
-          const next=physical[j].winner;
-          if(!(next==="莊"||next==="閒"))continue;
-          let rec=map.get(sig);
-          if(!rec){rec={莊:0,閒:0};map.set(sig,rec)}
-          rec[next]+=1;
+
+      for(const [shoeId,games] of by){
+        games.sort((a,b)=>a.game_number-b.game_number);
+        const seq=games.map(g=>g.winner);
+        const codes=seq.map(outcomeCodeWithTie);
+        const shoeIndex=shoes.length;
+        shoes.push({shoeId,seq,codes});
+
+        // 逐字照研究版 testBasic(groups,9) 的 D 路型結構候選建立方式。
+        for(let i=9;i<seq.length;i++){
+          const sig=runSig(codes.slice(i-9,i));
+          const rec={next:seq[i],shoe:shoeIndex,shoeId};
+          if(!map.has(sig))map.set(sig,[]);
+          map.get(sig).push(rec);
         }
       }
 
-      const playerStructs=[...map.values()].filter(r=>Number(r.閒||0)>Number(r.莊||0)).length;
-      const bankerStructs=[...map.values()].filter(r=>Number(r.莊||0)>Number(r.閒||0)).length;
       if(map.size===0)throw new Error("逆平 D9 歷史結構索引為空");
-      if(playerStructs===0||bankerStructs===0){
-        throw new Error("逆平 D9 正式歷史索引方向異常，請重新登入後再試");
-      }
+
       state._reverseD9StructMap=map;
-      return map;
+      state._reverseD9HistoryShoes=shoes;
+      return {map,shoes};
     })();
 
     try{return await state._reverseD9Loading}
     finally{state._reverseD9Loading=null}
   }
 
+  function detectReverseTargetShoe(rounds,shoes){
+    // 只使用「已經輸入完成」的牌局做辨識，不看未來局。
+    // 若目前輸入正是資料庫內某副歷史牌靴的重播，辨識唯一後，
+    // 正式版會排除整副目標鞋，還原研究時 LOSO 的同一規則。
+    if(!Array.isArray(shoes)||rounds.length<9)return null;
+    const target=rounds.map(normalizeWinner);
+    if(target.some(x=>!x))return null;
+
+    const matches=[];
+    for(let i=0;i<shoes.length;i++){
+      const s=shoes[i]?.seq;
+      if(!Array.isArray(s)||s.length<target.length)continue;
+      let ok=true;
+      for(let j=0;j<target.length;j++){
+        if(s[j]!==target[j]){ok=false;break}
+      }
+      if(ok)matches.push(i);
+      if(matches.length>1)break;
+    }
+    return matches.length===1?matches[0]:null;
+  }
+
   async function searchReverseD9Structure(rounds) {
-    if (rounds.length < 9) return null;
+    if(rounds.length<9)return null;
 
-    const codes = rounds.slice(-9).map(outcomeCodeWithTie).filter(Boolean);
-    if (codes.length !== 9) return null;
+    const codes=rounds.slice(-9).map(outcomeCodeWithTie);
+    if(codes.some(x=>!x))return null;
 
-    // 研究定義 D：最近9個實際 B/P/T 先壓成路型結構簽章，
-    // 再統計所有相同結構的歷史下一局莊/閒結果。
-    const map=await loadReverseD9StructureMap();
-    const rec=map.get(runSig(codes));
-    if(!rec)return null;
+    const {map,shoes}=await loadReverseD9StructureMap();
+    const sig=runSig(codes);
+    const source=map.get(sig)||[];
+    const excludeShoe=detectReverseTargetShoe(rounds,shoes);
 
-    const B=Number(rec.莊||0),P=Number(rec.閒||0),total=B+P;
-    if(total<=0||Math.abs(B-P)<1e-9)return null;
-    return {counts:{莊:B,閒:P},total,sampleCount:total,N:9};
+    // 研究版 D 核心：同結構的全部候選，排除目標鞋整副後，
+    // 直接以莊/閒票數多數決；和局作為 next 時不投票。
+    let B=0,P=0,sampleCount=0;
+    for(const c of source){
+      if(excludeShoe!==null && c.shoe===excludeShoe)continue;
+      if(c.next==="莊"){B++;sampleCount++}
+      else if(c.next==="閒"){P++;sampleCount++}
+    }
+
+    if(sampleCount<=0||Math.abs(B-P)<1e-9)return null;
+
+    console.debug("[HawkVision Reverse D9]",{
+      rounds:rounds.length,sig,excludeShoe,B,P,sampleCount,
+      result:B>P?"莊":"閒"
+    });
+
+    return {counts:{莊:B,閒:P},total:B+P,sampleCount,N:9};
   }
 
   async function searchRoadStructure(nonTieRounds) {
