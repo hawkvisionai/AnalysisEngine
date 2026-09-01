@@ -1448,7 +1448,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 }
 
 
-/* RC33 migrated goal setup CSS */
+/* RC34 migrated goal setup CSS */
 #hvEntryShell .hv-entry-card{width:min(1240px,calc(100vw - 40px))!important;max-width:none!important;height:min(760px,calc(100vh - 28px));max-height:none!important;overflow:hidden;padding:0!important;background:#151321!important}.hv-entry-card>#hvEntryTitle{margin:0;padding:14px 24px;border-bottom:1px solid #493f5b;font-size:0}.hv-entry-card>#hvEntryTitle .hv-brand-title{font-size:16px}.hv-entry-card>#hvEntryHint,.hv-entry-card>.hv-entry-actions{display:none!important}#hvEntryBody{height:calc(100% - 66px);padding:14px 20px 18px}.hv-goal-setup{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:18px}.hv-goal-main,.hv-goal-side{border:1px solid #493f5b;background:linear-gradient(180deg,#262034,#1c1827);border-radius:20px}.hv-goal-main{padding:18px 20px;overflow:hidden}.hv-goal-kicker{font-size:13px;color:#bdb3c9}.hv-goal-kicker span{background:#44365e;border:1px solid #67558d;border-radius:999px;padding:4px 9px;color:#e1d8f0;font-weight:900;margin-right:8px}.hv-goal-main h2,.hv-goal-side h2{font-size:26px;margin:12px 0 4px}.hv-goal-sub{margin:0 0 14px;color:#bdb3c9}.hv-style-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;height:calc(100% - 105px)}.hv-style-col{display:flex;flex-direction:column;gap:12px}.hv-style-card{flex:1;border:1px solid #554766;background:#2a2338;border-radius:16px;padding:18px;cursor:pointer;display:flex;flex-direction:column}.hv-style-col:has(.selected) .hv-style-card.selected{flex:1.42}.hv-style-col:has(.selected) .hv-style-card:not(.selected){flex:.58}.hv-style-card.selected{border-color:#9c86d4;background:linear-gradient(145deg,#3b3052,#2b243b)}.hv-style-head b{font-size:22px}.hv-style-card p{color:#bdb3c9;font-size:15px;line-height:1.55}.hv-levels{margin-top:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.hv-levels:empty{display:none}.hv-levels button{border:1px solid #554766;background:#211b2e;color:#fff;border-radius:10px;padding:11px;font-weight:900}.hv-levels button.selected{background:#6654a4;border-color:#8b78c4}.hv-level-desc{margin-top:10px;color:#cec4d8;font-size:13px;line-height:1.5}.hv-goal-side{padding:20px;display:flex;flex-direction:column}.hv-goal-side h2{margin-top:0}.hv-goal-summary{border:1px solid rgba(255,255,255,.09);border-radius:13px;overflow:hidden}.hv-goal-summary>div{display:flex;justify-content:space-between;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.07)}.hv-goal-summary>div:last-child{border:0}.hv-goal-summary span{color:#aaa0b9}.hv-point-label{font-weight:900;margin:16px 0 7px}.hv-point-input{width:100%;height:50px;border:1px solid #5a4e70;border-radius:12px;background:#181420;color:#fff;padding:0 14px;font-size:22px;font-weight:900;caret-color:#fff}.hv-point-input:focus{outline:none;border-color:#9b84dc;box-shadow:0 0 0 3px rgba(102,84,164,.18)}.hv-goal-warning{min-height:126px;margin-top:13px;padding:12px;border:2px solid transparent;border-radius:13px;background:#211b2d;font-size:14px;line-height:1.6}.hv-goal-warning p{margin:6px 0 0;color:inherit}.hv-goal-warning.red{border-color:#ef6b6b;color:#ffd2d2}.hv-goal-warning.orange{border-color:#e79b4b;color:#ffd9ad}.hv-goal-warning.yellow{border-color:#e7c75a;color:#fff0a8}.hv-goal-warning.green{border-color:#55b97a;color:#c9f2d6}.hv-legend{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}.hv-legend i{height:4px;border-radius:99px}.hv-legend i:nth-child(1){background:#ef6b6b}.hv-legend i:nth-child(2){background:#e79b4b}.hv-legend i:nth-child(3){background:#e7c75a}.hv-legend i:nth-child(4){background:#55b97a}.hv-goal-bottom{margin-top:auto}.hv-goal-status{font-size:12px;color:#aaa0b9;margin-bottom:10px}.hv-goal-bottom button{width:100%;border:0;border-radius:12px;background:#6654a4;color:#fff;padding:14px;font-size:17px;font-weight:900}.hv-goal-bottom button:disabled{opacity:.45}
 @keyframes hvPointPulse{0%,100%{box-shadow:0 0 0 0 rgba(139,120,196,.08);border-color:#655577}50%{box-shadow:0 0 0 4px rgba(139,120,196,.22);border-color:#a58be3}}
 @media(max-width:700px){#hvEntryShell{align-items:flex-start;padding:0!important;overflow:auto}.hv-entry-card{width:100%!important;height:auto!important;min-height:100dvh!important;border-radius:0!important}.hv-entry-card>#hvEntryTitle{padding:12px 16px}#hvEntryBody{height:auto;padding:16px}.hv-goal-setup{display:block;height:auto}.hv-goal-main,.hv-goal-side{border-radius:0;border-left:0;border-right:0}.hv-goal-main{padding:18px 16px}.hv-goal-side{padding:20px 16px 28px;margin-top:14px}.hv-style-grid{display:block;height:auto}.hv-style-col{display:block}.hv-style-card{margin-bottom:10px;min-height:150px}.hv-style-col:has(.selected) .hv-style-card.selected,.hv-style-col:has(.selected) .hv-style-card:not(.selected){flex:none}.hv-levels{grid-template-columns:repeat(3,1fr)}.hv-point-input:not(:disabled){animation:hvPointPulse 2.4s ease-in-out infinite}.hv-point-input:focus{animation:none}.hv-goal-main h2,.hv-goal-side h2{font-size:25px}}
@@ -1609,7 +1609,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 
 
 
-/* === RC33 mobile viewport crop fix === */
+/* === RC34 mobile viewport crop fix === */
 @media(max-width:700px){
   html,body{
     min-height:100%;
@@ -1699,7 +1699,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 
 
 
-/* === RC33 iOS Safari full-page flow fix === */
+/* === RC34 iOS Safari full-page flow fix === */
 @media(max-width:700px){
   html,body{
     width:100%!important;
@@ -1803,7 +1803,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 
 
 
-/* === RC33 unlock mobile Analysis Settings scrolling only === */
+/* === RC34 unlock mobile Analysis Settings scrolling only === */
 @media screen and (max-width:760px){
   body.hv-setup-visible{
     overflow:hidden!important;
@@ -1865,7 +1865,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 
 
 
-/* === RC33 restore explicit Hours -> Analysis entry on mobile === */
+/* === RC34 restore explicit Hours -> Analysis entry on mobile === */
 .hv-hours-mobile-enter-wrap{display:none}
 @media screen and (max-width:760px){
   #hvHoursEnter{
@@ -1900,7 +1900,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
 }
 
 
-/* === RC33 Hours -> Analysis action visible on desktop + mobile === */
+/* === RC34 Hours -> Analysis action visible on desktop + mobile === */
 .hv-hours-mobile-enter-wrap{
   display:block!important;
   width:100%!important;
@@ -1940,7 +1940,7 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
   }
 }
 
-/* === RC33 hours top-right entry only === */
+/* === RC34 hours top-right entry only === */
 .hv-hours-mobile-enter-wrap{display:none!important}
 .hv-hours-top-right{
   display:flex!important;
@@ -1979,4 +1979,16 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
     padding:0 12px!important;
     font-size:14px!important;
   }
+}
+
+/* === RC34 setup enter click reliability === */
+#hvInlineEnter{
+  position:relative!important;
+  z-index:5!important;
+  pointer-events:auto!important;
+  cursor:pointer!important;
+  touch-action:manipulation!important;
+}
+#hvInlineEnter:disabled{
+  pointer-events:auto!important;
 }

@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.32";
+const VERSION="3.4.33";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -157,6 +157,70 @@ function warningData(){const i=info();if(!i||state.points<=0)return null;const r
  const base=rec/1.5,pct=((state.points-base)/base)*100;if(state.points>=rec)return ["green","點數準備已達建議標準",`建議準備：${i.units}注（${fmt(rec)}點）。`];if(pct<=10)return ["red","安全緩衝偏低",`本次帶入點數的安全緩衝偏低。建議準備：${i.units}注。`];if(pct<30)return ["orange","安全緩衝較少",`建議提高點數準備。建議準備：${i.units}注。`];return ["yellow","已有一定安全緩衝",`尚未達建議準備標準。建議準備：${i.units}注。`]}
 function snapshotSettings(){return {mode:state.mode,family:state.family,method:state.method,points:state.points,initialPoints:state.initialPoints,profit:state.profit,skippedSetup:state.skippedSetup,analysisActive:state.analysisActive,bettingActive:state.bettingActive,progressionIndex:state.progressionIndex,noCommission:state.noCommission,actualMode:state.actualMode,modeNotice:state.modeNotice,unitPoints:state.unitPoints,corePause:JSON.parse(JSON.stringify(state.corePause||freshCorePause())),reverseHundredUsed:!!state.reverseHundredUsed}}
 function restoreSettingsSnapshot(){const x=state.settingsSnapshot;if(!x)return;Object.assign(state,x);state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.manualEdited=false}
+function enterAnalysisFromSetupButton(){
+ try{
+   // 固定流程：分析設定頁先判斷會員時數；有時數才能直接進分析，
+   // 沒時數才轉時數包。管理者不受此限制。
+   if(isMemberRole()&&!hasRemainingTime()){
+     renderHours();
+     return;
+   }
+
+   // 未選任何新風格/層級：使用原正式「標準均注」核心。
+   if(!hasChosenNewStrategy()){
+     enterDefaultStandard();
+     return;
+   }
+
+   // 已選新策略：不再經過會靜默 return 的舊 validateSetup 路徑，
+   // 直接用畫面值/建議值完成設定後進分析。
+   const z=info();
+   if(!z){
+     setErr("分析設定讀取失敗，請重新選擇層級");
+     return;
+   }
+
+   const input=$("hvPointsInput");
+   let v=Number(String(input?.value??state.points??"").replace(/\D/g,""));
+   if(!Number.isFinite(v)||v<=0){
+     v=methodRecommendedPoints(z);
+     state.points=v;
+     state.initialPoints=v;
+     if(input)input.value=String(v);
+   }else{
+     v=Math.min(CAP,Math.max(0,v));
+     state.points=v;
+     if(state.manualEdited){
+       state.initialPoints=v;
+       state.profit=0;
+     }
+   }
+
+   state.mode="basic";
+   state.actualMode="basic";
+   state.setupComplete=true;
+   state.skippedSetup=false;
+   state.noCommission=false;
+
+   if(z.reverse){
+     state.unitPoints=0;
+   }else if(!state.unitPoints||state.manualEdited){
+     state.unitPoints=calculatedUnit();
+   }
+
+   state.manualEdited=false;
+   state.pendingSettingsCommit=false;
+   state.editingSettings=false;
+
+   window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
+   window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
+   queueSave();
+   showAnalysis();
+ }catch(err){
+   console.error("分析設定進入分析失敗",err);
+   setErr("無法進入分析："+(err?.message||String(err)));
+ }
+}
 function enterDefaultStandard(){
  const returningFromSettings=state.editingSettings;
  state.mode="basic";
@@ -196,7 +260,7 @@ function renderSetup(){
  $("hvEntryBody").querySelectorAll("[data-style]").forEach(c=>c.onclick=e=>{if(e.target.closest("[data-method]"))return;const k=c.dataset.style;if(activeStyle===k){state.family=null;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false;document.activeElement?.blur?.()}else{state.family=k;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false}renderSetup()});
  $("hvEntryBody").querySelectorAll("[data-method]").forEach(b=>b.onclick=e=>{e.stopPropagation();state.method=b.dataset.method;const z=info();state.points=methodRecommendedPoints(z);state.initialPoints=state.points;state.profit=0;state.unitPoints=z.reverse?0:100;state.manualEdited=false;renderSetup();const mobile=matchMedia("(max-width:700px)").matches;const input=$("hvPointsInput");if(input){input.focus();try{const n=input.value.length;input.setSelectionRange(n,n)}catch(_){ }if(mobile){requestAnimationFrame(()=>{const shell=$("hvEntryShell"),side=document.querySelector(".hv-goal-side");if(shell&&side){shell.scrollTo({top:Math.max(0,side.offsetTop-8),behavior:"smooth"})}})}}});
  $("hvPointsInput")?.addEventListener("input",e=>{const raw=String(e.target.value).replace(/\D/g,"").slice(0,10);e.target.value=raw;state.points=Math.min(CAP,Number(raw||0));state.manualEdited=true;renderDynamicSetupBits()});
- const inlineEnter=$("hvInlineEnter");if(inlineEnter)inlineEnter.onclick=()=>{if(isMemberRole()&&!hasRemainingTime()){renderHours();return}if(hasChosenNewStrategy()){enterFromSetup();return}enterDefaultStandard()};
+ const inlineEnter=$("hvInlineEnter");if(inlineEnter){inlineEnter.disabled=false;inlineEnter.onclick=enterAnalysisFromSetupButton;}
 }
 function renderDynamicSetupBits(){const i=info(),warn=warningData();const box=document.querySelector(".hv-goal-warning");if(box){box.className=`hv-goal-warning ${warn?warn[0]:"empty"}`;box.innerHTML=warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}}
 function validateSetup(){if(!setupComplete())return false;const v=Math.min(CAP,Math.max(0,Number($("hvPointsInput")?.value||state.points||0)));if(!Number.isFinite(v))return false;state.points=v;state.skippedSetup=false;return true}
