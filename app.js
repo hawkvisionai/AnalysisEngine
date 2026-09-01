@@ -160,18 +160,28 @@
   }
 
   async function loadReverseD9StructureMap(){
+    const authClient=window.hvAnalysisAuthClient;
+    const {data:{session:currentAuthSession}}=authClient?await authClient.auth.getSession():{data:{session:null}};
+    const authKey=currentAuthSession?.user?.id||"";
+    if(state._reverseD9AuthKey!==authKey){
+      state._reverseD9AuthKey=authKey;
+      state._reverseD9StructMap=null;
+      state._reverseD9Loading=null;
+    }
     if(state._reverseD9StructMap instanceof Map && state._reverseD9StructMap.size>0){
       return state._reverseD9StructMap;
     }
     if(state._reverseD9Loading)return state._reverseD9Loading;
 
     state._reverseD9Loading=(async()=>{
-      const cfg2=window.HAWKVISION_CONFIG||{};
-      if(!window.supabase||!cfg2.SUPABASE_URL||!cfg2.SUPABASE_ANON_KEY)throw new Error("歷史資料庫設定不存在");
-      const hc=window.supabase.createClient(
-        cfg2.SUPABASE_URL,cfg2.SUPABASE_ANON_KEY,
-        {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
-      );
+      const hc=window.hvAnalysisAuthClient;
+      if(!hc)throw new Error("登入資料庫連線尚未完成");
+
+      // 研究測試頁是在登入後，以同一個已驗證 client 查詢 games。
+      // 正式逆平也必須使用相同身份，不能另建匿名 client，
+      // 否則 RLS / 正式資料可見範圍可能不同，會造成 D9 訊號完全偏掉。
+      const {data:{session:authSession}}=await hc.auth.getSession();
+      if(!authSession?.access_token)throw new Error("登入狀態已失效，無法讀取正式分析資料");
 
       const rows=[];
       for(let from=0;;from+=1000){
@@ -207,7 +217,12 @@
         }
       }
 
+      const playerStructs=[...map.values()].filter(r=>Number(r.閒||0)>Number(r.莊||0)).length;
+      const bankerStructs=[...map.values()].filter(r=>Number(r.莊||0)>Number(r.閒||0)).length;
       if(map.size===0)throw new Error("逆平 D9 歷史結構索引為空");
+      if(playerStructs===0||bankerStructs===0){
+        throw new Error("逆平 D9 正式歷史索引方向異常，請重新登入後再試");
+      }
       state._reverseD9StructMap=map;
       return map;
     })();
@@ -249,8 +264,8 @@
   async function searchSequenceCore(kind,N,rounds){
     await loadBasicHistoryIndex();
     if(rounds.length<N)return null;
-    const cfg2=window.HAWKVISION_CONFIG||{};
-    const hc=window.supabase.createClient(cfg2.SUPABASE_URL,cfg2.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    const hc=window.hvAnalysisAuthClient;
+    if(!hc)throw new Error("登入資料庫連線尚未完成");
     if(!state._genericHistory){
       const rows=[];for(let from=0;;from+=1000){const {data,error}=await hc.from("games").select("shoe_id,game_number,winner").range(from,from+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break}
       const by=new Map();for(const g of rows){if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);by.get(g.shoe_id).push(g)}
