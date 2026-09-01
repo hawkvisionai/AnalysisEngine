@@ -37,12 +37,22 @@
   const BASIC_INDEX_TTL_MS = 6*60*60*1000;
   const D9_METHODS = new Set(["reverse7","reverse8","d9_1137","d9_113715","d9_11371531_wait","d9_1371531_wait","d9_1371531_nostop"]);
 
+  function normalizeWinner(winner) {
+    const x=String(winner??"").trim().toLowerCase();
+    if (winner==="莊" || ["b","banker","庄","bank"].includes(x)) return "莊";
+    if (winner==="閒" || ["p","player","闲","play"].includes(x)) return "閒";
+    if (winner==="和" || ["t","tie","和局"].includes(x)) return "和";
+    return null;
+  }
+
   function outcomeCode(winner) {
-    return winner === "莊" ? "B" : winner === "閒" ? "P" : null;
+    const x=normalizeWinner(winner);
+    return x === "莊" ? "B" : x === "閒" ? "P" : null;
   }
 
   function outcomeCodeWithTie(winner) {
-    return winner === "莊" ? "B" : winner === "閒" ? "P" : winner === "和" ? "T" : null;
+    const x=normalizeWinner(winner);
+    return x === "莊" ? "B" : x === "閒" ? "P" : x === "和" ? "T" : null;
   }
 
   function runSig(codes) {
@@ -149,19 +159,77 @@
     finally { state.historyLoading = null; }
   }
 
+  async function loadReverseD9StructureMap(){
+    if(state._reverseD9StructMap instanceof Map && state._reverseD9StructMap.size>0){
+      return state._reverseD9StructMap;
+    }
+    if(state._reverseD9Loading)return state._reverseD9Loading;
+
+    state._reverseD9Loading=(async()=>{
+      const cfg2=window.HAWKVISION_CONFIG||{};
+      if(!window.supabase||!cfg2.SUPABASE_URL||!cfg2.SUPABASE_ANON_KEY)throw new Error("歷史資料庫設定不存在");
+      const hc=window.supabase.createClient(
+        cfg2.SUPABASE_URL,cfg2.SUPABASE_ANON_KEY,
+        {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
+      );
+
+      const rows=[];
+      for(let from=0;;from+=1000){
+        const {data,error}=await hc.from("games")
+          .select("shoe_id,game_number,winner")
+          .range(from,from+999);
+        if(error)throw error;
+        const batch=Array.isArray(data)?data:[];
+        rows.push(...batch);
+        if(batch.length<1000)break;
+        if(rows.length>50000)throw new Error("歷史資料筆數異常");
+      }
+
+      const by=new Map();
+      for(const g of rows){
+        const w=normalizeWinner(g.winner);
+        if(!w)continue;
+        if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);
+        by.get(g.shoe_id).push({...g,_winner:w});
+      }
+
+      const map=new Map();
+      for(const games of by.values()){
+        games.sort((a,b)=>Number(a.game_number||0)-Number(b.game_number||0));
+        const physical=games.map(g=>({code:outcomeCodeWithTie(g._winner),winner:g._winner})).filter(x=>x.code);
+        for(let j=9;j<physical.length;j++){
+          const sig=runSig(physical.slice(j-9,j).map(x=>x.code));
+          const next=physical[j].winner;
+          if(!(next==="莊"||next==="閒"))continue;
+          let rec=map.get(sig);
+          if(!rec){rec={莊:0,閒:0};map.set(sig,rec)}
+          rec[next]+=1;
+        }
+      }
+
+      if(map.size===0)throw new Error("逆平 D9 歷史結構索引為空");
+      state._reverseD9StructMap=map;
+      return map;
+    })();
+
+    try{return await state._reverseD9Loading}
+    finally{state._reverseD9Loading=null}
+  }
+
   async function searchReverseD9Structure(rounds) {
     if (rounds.length < 9) return null;
-    const maps = await loadBasicHistoryIndex();
+
     const codes = rounds.slice(-9).map(outcomeCodeWithTie).filter(Boolean);
     if (codes.length !== 9) return null;
 
-    // 驗證研究 D9 路型結構：只取完全相同的結構簽章，不用全庫近似回退。
-    const rec = maps["9T"].get(runSig(codes));
-    if (!rec) return null;
+    // 研究定義 D：最近9個實際 B/P/T 先壓成路型結構簽章，
+    // 再統計所有相同結構的歷史下一局莊/閒結果。
+    const map=await loadReverseD9StructureMap();
+    const rec=map.get(runSig(codes));
+    if(!rec)return null;
 
-    const B = Number(rec.莊||0), P = Number(rec.閒||0);
-    const total = B+P;
-    if (total <= 0 || Math.abs(B-P) < 1e-9) return null;
+    const B=Number(rec.莊||0),P=Number(rec.閒||0),total=B+P;
+    if(total<=0||Math.abs(B-P)<1e-9)return null;
     return {counts:{莊:B,閒:P},total,sampleCount:total,N:9};
   }
 
@@ -673,7 +741,19 @@
       }
 
       let outcome = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-      if (["reverse7","reverse8"].includes(state.strategyMethod) && outcome!=="閒") { state.pendingPrediction=null; window.HawkVisionSessionPolicy?.clearPublicSignal?.(); showNoSignalState(); refreshSuggestedBet(); saveSession(); return; }
+      if (["reverse7","reverse8"].includes(state.strategyMethod) && outcome!=="閒") {
+        state.pendingPrediction=null;
+        window.HawkVisionSessionPolicy?.clearPublicSignal?.();
+        if(els.decisionCard){
+          els.decisionCard.className="decision waiting-state";
+          els.decision.textContent="等待閒訊號";
+          els.decisionPercent.textContent="";
+          els.confidence.textContent="暫不下注";
+          els.confidence.classList.add("is-waiting");
+          els.warning.classList.add("hidden");
+        }
+        refreshSuggestedBet();saveSession();return;
+      }
 
       // 歷史符合率：
       // 只表示「相同歷史序列中，下一個非和局結果為本次判定的比例」。
