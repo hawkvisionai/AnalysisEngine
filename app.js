@@ -33,12 +33,16 @@
   };
 
   const BASIC_MIN_HISTORY = 10;
-  const BASIC_INDEX_CACHE_KEY = "hv-basic-d-index-v1";
+  const BASIC_INDEX_CACHE_KEY = "hv-basic-d-index-v2";
   const BASIC_INDEX_TTL_MS = 6*60*60*1000;
   const D9_METHODS = new Set(["reverse7","reverse8","d9_1137","d9_113715","d9_11371531_wait","d9_1371531_wait","d9_1371531_nostop"]);
 
   function outcomeCode(winner) {
     return winner === "莊" ? "B" : winner === "閒" ? "P" : null;
+  }
+
+  function outcomeCodeWithTie(winner) {
+    return winner === "莊" ? "B" : winner === "閒" ? "P" : winner === "和" ? "T" : null;
   }
 
   function runSig(codes) {
@@ -60,14 +64,19 @@
     state.historyLoading = (async () => {
       try {
         const cached = JSON.parse(sessionStorage.getItem(BASIC_INDEX_CACHE_KEY) || "null");
-        if (cached && Date.now()-Number(cached.savedAt||0) < BASIC_INDEX_TTL_MS) {
-          const maps={6:new Map(cached.m6||[]),9:new Map(cached.m9||[])};
+        if (cached && Date.now()-Number(cached.savedAt||0) < BASIC_INDEX_TTL_MS && Array.isArray(cached.m9t)) {
+          const maps={6:new Map(cached.m6||[]),9:new Map(cached.m9||[]),"9T":new Map(cached.m9t||[])};
           state.historyIndex=maps;
           return maps;
         }
       } catch (_) {}
+
       if (!window.supabase || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) throw new Error("歷史資料庫設定不存在");
-      const historyClient = window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+      const historyClient = window.supabase.createClient(
+        cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,
+        {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
+      );
+
       const rows = [];
       const step = 1000;
       for (let from = 0; ; from += step) {
@@ -80,31 +89,80 @@
         if (batch.length < step) break;
         if (rows.length > 50000) throw new Error("歷史資料筆數異常");
       }
+
       const byShoe = new Map();
       for (const g of rows) {
         if (!byShoe.has(g.shoe_id)) byShoe.set(g.shoe_id, []);
         byShoe.get(g.shoe_id).push(g);
       }
-      const maps = { 6: new Map(), 9: new Map() };
+
+      const maps = {6:new Map(),9:new Map(),"9T":new Map()};
+
       for (const games of byShoe.values()) {
         games.sort((a,b) => Number(a.game_number||0) - Number(b.game_number||0));
-        const codes = games.map(g => ({ code: outcomeCode(g.winner), winner: g.winner })).filter(x => x.code);
+
+        // 原基礎 D6 / D9：和局不佔有效局位置。
+        const nonTie = games
+          .map(g => ({code:outcomeCode(g.winner), winner:g.winner}))
+          .filter(x => x.code);
+
         for (const N of [6,9]) {
-          for (let j = N; j < codes.length; j += 1) {
-            const sig = runSig(codes.slice(j-N,j).map(x => x.code));
-            const next = codes[j].winner;
-            if (!(next === "莊" || next === "閒")) continue;
-            let rec = maps[N].get(sig);
-            if (!rec) { rec = { 莊:0, 閒:0 }; maps[N].set(sig, rec); }
-            rec[next] += 1;
+          for (let j=N;j<nonTie.length;j+=1) {
+            const sig=runSig(nonTie.slice(j-N,j).map(x=>x.code));
+            const next=nonTie[j].winner;
+            if (!(next==="莊"||next==="閒")) continue;
+            let rec=maps[N].get(sig);
+            if(!rec){rec={莊:0,閒:0};maps[N].set(sig,rec)}
+            rec[next]+=1;
           }
         }
+
+        // 逆平 D9：使用最近 9 個「實際 B/P/T 物理結果」，
+        // 與驗證研究一致；Tie 會佔 D9 的一個位置。
+        const physical = games
+          .map(g => ({code:outcomeCodeWithTie(g.winner), winner:g.winner}))
+          .filter(x => x.code);
+
+        for(let j=9;j<physical.length;j+=1){
+          const sig=runSig(physical.slice(j-9,j).map(x=>x.code));
+          const next=physical[j].winner;
+          let rec=maps["9T"].get(sig);
+          if(!rec){rec={莊:0,閒:0};maps["9T"].set(sig,rec)}
+          // 研究核心在選方向時只累計下一局 B/P；下一局若是 Tie 不投票。
+          if(next==="莊"||next==="閒")rec[next]+=1;
+        }
       }
-      state.historyIndex = maps;
-      try { sessionStorage.setItem(BASIC_INDEX_CACHE_KEY,JSON.stringify({savedAt:Date.now(),m6:[...maps[6]],m9:[...maps[9]]})); } catch (_) {}
+
+      state.historyIndex=maps;
+      try{
+        sessionStorage.setItem(BASIC_INDEX_CACHE_KEY,JSON.stringify({
+          savedAt:Date.now(),
+          m6:[...maps[6]],
+          m9:[...maps[9]],
+          m9t:[...maps["9T"]]
+        }));
+      }catch(_){}
       return maps;
     })();
-    try { return await state.historyLoading; } finally { state.historyLoading = null; }
+
+    try { return await state.historyLoading; }
+    finally { state.historyLoading = null; }
+  }
+
+  async function searchReverseD9Structure(rounds) {
+    if (rounds.length < 9) return null;
+    const maps = await loadBasicHistoryIndex();
+    const codes = rounds.slice(-9).map(outcomeCodeWithTie).filter(Boolean);
+    if (codes.length !== 9) return null;
+
+    // 驗證研究 D9 路型結構：只取完全相同的結構簽章，不用全庫近似回退。
+    const rec = maps["9T"].get(runSig(codes));
+    if (!rec) return null;
+
+    const B = Number(rec.莊||0), P = Number(rec.閒||0);
+    const total = B+P;
+    if (total <= 0 || Math.abs(B-P) < 1e-9) return null;
+    return {counts:{莊:B,閒:P},total,sampleCount:total,N:9};
   }
 
   async function searchRoadStructure(nonTieRounds) {
@@ -135,11 +193,11 @@
     const sig=a=>{let sw=0,mx=1,cur=1;for(let i=1;i<a.length;i++){if(a[i]===a[i-1]){cur++;mx=Math.max(mx,cur)}else{sw++;cur=1}}return `${a[a.length-1]}|${cur}|${sw}|${mx}`};
     for(const shoe of state._genericHistory){for(let j=N;j<shoe.length;j++){const next=shoe[j];if(!(next==="莊"||next==="閒"))continue;const seq=shoe.slice(j-N,j).map(x=>x==="莊"?"B":x==="閒"?"P":"T");let d=mismatch(target,seq,kind==="C");if(kind==="B"&&d>1)continue;if(kind==="D"){if(sig(target)===sig(seq))d=0;else d=mismatch(target,seq,true)*1.8}cand.push({next,d})}}
     if(kind==="B"){cand.sort((a,b)=>a.d-b.d);cand=cand.slice(0,120)}else{cand.sort((a,b)=>a.d-b.d);cand=cand.slice(0,120)}
-    if(cand.length<10)return null;let B=0,P=0;for(const x of cand){const w=1/(1+x.d);if(x.next==="莊")B+=w;else P+=w}if(Math.abs(B-P)<1e-9)return null;return {counts:{莊:B,閒:P},total:cand.length,N};
+    if(cand.length<10)return null;let B=0,P=0;for(const x of cand){const w=1/(1+x.d);if(x.next==="莊")B+=w;else P+=w}if(Math.abs(B-P)<1e-9)return null;return {counts:{莊:B,閒:P},total:B+P,sampleCount:cand.length,N};
   }
   async function searchStrategyCore(){
     const m=state.strategyMethod||"";
-    if(m==="reverse7"||m==="reverse8")return searchSequenceCore("D",9,state.rounds); // D9含和：保留實際9局位置
+    if(m==="reverse7"||m==="reverse8")return searchReverseD9Structure(state.rounds); // 驗證版 D9：實際9局 B/P/T、Tie 佔位、完全路型結構
     if(m==="b3_11371531_nostop")return searchSequenceCore("B",3,state.rounds.filter(x=>x!=="和"));
     if(m==="c10_1371531_recover")return searchSequenceCore("C",10,state.rounds.filter(x=>x!=="和"));
     return searchRoadStructure(state.rounds.filter(x=>x!=="和"));
@@ -602,9 +660,10 @@
     try {
       const road = await searchStrategyCore();
       const counts = road?.counts || { "莊": 0, "閒": 0 };
-      const total = road?.total || 0;
+      const signalMass = Math.max(0,Number(counts["莊"]||0)+Number(counts["閒"]||0));
+      const sampleCount = Math.max(0,Number(road?.sampleCount ?? road?.total ?? signalMass));
 
-      if (!total) {
+      if (!signalMass) {
         state.pendingPrediction = null;
         window.HawkVisionSessionPolicy?.clearPublicSignal?.();
         showNoSignalState();
@@ -619,8 +678,8 @@
       // 歷史符合率：
       // 只表示「相同歷史序列中，下一個非和局結果為本次判定的比例」。
       // 它與右側信心度是兩個不同指標。
-      const rawHistoricalRate = (counts[outcome] + 1) / (total + 2) * 100;
-      const historicalRate = Math.min(98, Math.round(rawHistoricalRate));
+      const rawHistoricalRate = Number(counts[outcome]||0) / signalMass * 100;
+      const historicalRate = Math.max(50,Math.min(100,Math.round(rawHistoricalRate)));
 
       // 信心度 v2.8：
       // 40% 歷史符合率 + 40% 資料充足度 + 20% 分析一致性。
@@ -631,8 +690,8 @@
       // 分析一致性以莊閒差距衡量：
       // 50:50 時為 0，100:0 時為 100。
       const sampleScale = Math.max(1, Number(cfg.CONFIDENCE_SAMPLE_SCALE || 50));
-      const sampleSufficiency = 100 * (1 - Math.exp(-total / sampleScale));
-      const consistency = Math.abs(counts["莊"] - counts["閒"]) / total * 100;
+      const sampleSufficiency = 100 * (1 - Math.exp(-sampleCount / sampleScale));
+      const consistency = signalMass ? Math.abs(Number(counts["莊"]||0) - Number(counts["閒"]||0)) / signalMass * 100 : 0;
 
       const historicalWeight = Number(cfg.CONFIDENCE_HISTORY_WEIGHT || 0.40);
       const sampleWeight = Number(cfg.CONFIDENCE_SAMPLE_WEIGHT || 0.40);
@@ -714,7 +773,7 @@
     renderAll();
     saveSession();
 
-    if (state.analysisStarted && result !== "和") {
+    if (state.analysisStarted && (result !== "和" || ["reverse7","reverse8"].includes(state.strategyMethod))) {
       await analyze(true);
     }
   }
@@ -809,8 +868,8 @@
       state.correct=Number(saved.correct||0);state.wrong=Number(saved.wrong||0);
       if(saved.lookback)els.lookback.value=String(saved.lookback);
       renderAll();resetAnalysisDisplay();saveSession();
-      const nonTie=state.rounds.filter(x=>x!=="和").length;
-      if(state.analysisStarted&&nonTie>=Number(els.lookback.value))analyze(true);
+      const readyCount=["reverse7","reverse8"].includes(state.strategyMethod)?state.rounds.length:state.rounds.filter(x=>x!=="和").length;
+      if(state.analysisStarted&&readyCount>=Number(els.lookback.value))analyze(true);
       return true;
     },
     resetAnalysis(){startNewShoe();},
@@ -827,8 +886,10 @@
     showInitialWaitingState();
   }
 
-  const restoredNonTieCount = state.rounds.filter(result => result !== "和").length;
-  if (restored && state.analysisStarted && restoredNonTieCount >= Number(els.lookback.value)) {
+  const restoredReadyCount = ["reverse7","reverse8"].includes(state.strategyMethod)
+    ? state.rounds.length
+    : state.rounds.filter(result => result !== "和").length;
+  if (restored && state.analysisStarted && restoredReadyCount >= Number(els.lookback.value)) {
     analyze(true);
   }
 })();

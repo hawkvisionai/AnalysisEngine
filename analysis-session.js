@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.36";
+const VERSION="3.4.37";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -131,7 +131,7 @@ function currentInternalPrediction(){const p=window.HawkVisionAnalysisCore?.getP
 // Global main-bet invariant for every analysis mode / play method / staking method:
 // tie never settles or consumes an existing Banker/Player decision; the same decision and wager stage continue to the next non-tie hand.
 function hasBettableDecision(){const p=currentInternalPrediction();return (p==="莊"||p==="閒")&&state.currentPublicBetAllowed===true}
-function displayedSuggested(){if(!state.bettingActive)return "—";if(!hasBettableDecision())return "本局不下注";if(state.points<100||state.skippedSetup)return "—";const wager=suggestedBetPoints();if(info()?.reverse&&wager===100&&state.reverseHundredUsed)return "點數不足";if(wager>state.points)return "本金不足";return `${fmt(wager)} 點`}
+function displayedSuggested(){if(!(state.analysisActive||state.bettingActive))return "—";if(!hasBettableDecision())return "本局不下注";if(state.points<100||state.skippedSetup)return "—";const wager=suggestedBetPoints();if(info()?.reverse&&wager===100&&state.reverseHundredUsed)return "點數不足";if(wager>state.points)return "本金不足";return `${fmt(wager)} 點`}
 function setupComplete(){return !!(state.mode&&state.method)}
 function strategyKey(){return `${state.mode||""}|${state.family||""}|${state.method||""}`}
 function showShell(){$("hvEntryShell")?.classList.add("show");document.body.classList.remove("hv-analysis-visible");document.body.classList.add("hv-setup-visible")}
