@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.26";
+const VERSION="3.4.27";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -177,6 +177,9 @@ function enterDefaultStandard(){
  if(returningFromSettings)setRoadVisible(true);
 }
 function renderSetup(){
+ if(matchMedia("(max-width:700px)").matches){
+   requestAnimationFrame(()=>{const shell=$("hvEntryShell");if(shell&&(!state.family||!state.method))shell.scrollTo({top:0,left:0,behavior:"auto"})});
+ }
  beginView("setup");showShell();setErr("");state.mode="basic";if(state.family==="goal")state.family=null;
  $("hvEntryTitle").innerHTML=`<span class="hv-setup-brand"><img src="hawkvision-logo.png" alt="HawkVision"><span><strong>HawkVision</strong><small>ANALYSIS ENGINE</small></span></span>`;$("hvEntryHint").textContent="";["hvEntryBack","hvEntrySkip","hvEntryNext"].forEach(id=>$(id).style.display="none");
  const activeStyle=(state.family&&STYLE_INFO[state.family]?state.family:methodStyleKey()),i=activeStyle?info():null,warn=activeStyle?warningData():null,canPoints=!!(activeStyle&&state.method);
