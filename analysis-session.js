@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.43";
+const VERSION="3.4.44";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -269,23 +269,39 @@ function enterAnalysisFromSetupButton(){
    state.editingSettings=false;
 
    if(strategyChanged){
-     // 只重置「打法控制狀態」，目前遊戲點數 / 本次輸贏 / 已輸入牌局保留。
+     // 固定規則：切換玩法 / 層級 / 打法 = 開啟全新分析。
+     // 只保留目前剩餘點數與本次輸贏；舊鞋所有分析資料全部清除。
+     const keepPoints=state.points;
+     const keepInitialPoints=state.initialPoints;
+     const keepProfit=state.profit;
+
+     window.HawkVisionAnalysisCore?.resetShoe?.();
+
+     state.points=keepPoints;
+     state.initialPoints=keepInitialPoints;
+     state.profit=keepProfit;
+     normalizePointState("points");
+
+     state.analysisActive=false;
+     state.bettingActive=false;
      state.progressionIndex=0;
      state.currentPublicBetAllowed=false;
      state.reverseHundredUsed=false;
+     state.officialHistory=[];
+     state.skipSettlement=false;
+     state.lastRoundEvaluationAllowed=false;
+     state.lastRoundHadSignal=false;
      resetCorePause();
+     resetOfficialStats();
+     resetSkip();
+     setRoadVisible(true);
    }
 
    window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
    window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
+   updatePointCards();
    queueSave();
    showAnalysis();
-
-   // 若原本已在分析中，切換打法後不得等到下一局才更新。
-   // 用現在已輸入的牌局立即重新取得新打法的下一局判定。
-   if(state.analysisActive && strategyRoundCount()>=requiredGames()){
-     Promise.resolve(window.HawkVisionAnalysisCore?.recomputeCurrent?.()).catch(e=>console.error("切換打法重新分析失敗",e));
-   }
  }catch(err){
    console.error("分析設定進入分析失敗",err);
    setErr("無法進入分析："+(err?.message||String(err)));
@@ -335,7 +351,15 @@ function renderSetup(){
 }
 function renderDynamicSetupBits(){const i=info(),warn=warningData();const box=document.querySelector(".hv-goal-warning");if(box){box.className=`hv-goal-warning ${warn?warn[0]:"empty"}`;box.innerHTML=warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}}
 function validateSetup(){if(!setupComplete())return false;const v=Math.min(CAP,Math.max(0,Number($("hvPointsInput")?.value||state.points||0)));if(!Number.isFinite(v))return false;state.points=v;state.skippedSetup=false;return true}
-function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){if(before){state.initialPoints=Math.max(0,Number(before.initialPoints)||0);normalizePointState("points")}else{state.initialPoints=state.points;state.profit=0}}else if(before){state.points=Math.max(0,Number(before.points)||0);state.initialPoints=Math.max(0,Number(before.initialPoints)||0);state.profit=Number(before.profit)||0;normalizePointState("points")}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){window.HawkVisionAnalysisCore?.resetShoe?.();state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;state.officialHistory=[];state.skipSettlement=false;resetCorePause()}state.actualMode=state.mode||"basic";state.modeNotice="";state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.editingSettings=false;state.manualEdited=false;state.setupComplete=true;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}
+function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){if(before){state.initialPoints=Math.max(0,Number(before.initialPoints)||0);normalizePointState("points")}else{state.initialPoints=state.points;state.profit=0}}else if(before){state.points=Math.max(0,Number(before.points)||0);state.initialPoints=Math.max(0,Number(before.initialPoints)||0);state.profit=Number(before.profit)||0;normalizePointState("points")}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){
+ const keepPoints=state.points,keepInitialPoints=state.initialPoints,keepProfit=state.profit;
+ window.HawkVisionAnalysisCore?.resetShoe?.();
+ state.points=keepPoints;state.initialPoints=keepInitialPoints;state.profit=keepProfit;normalizePointState("points");
+ state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;
+ state.officialHistory=[];state.skipSettlement=false;state.currentPublicBetAllowed=false;
+ state.reverseHundredUsed=false;state.lastRoundEvaluationAllowed=false;state.lastRoundHadSignal=false;
+ resetCorePause();resetOfficialStats();resetSkip();setRoadVisible(true);updatePointCards()
+}state.actualMode=state.mode||"basic";state.modeNotice="";state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.editingSettings=false;state.manualEdited=false;state.setupComplete=true;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}
 function enterFromSetup(){if(!validateSetup())return;const returningFromSettings=state.editingSettings;if(state.editingSettings)state.pendingSettingsCommit=true;if(state.pendingSettingsCommit)commitSettings();else{state.setupComplete=true;state.actualMode=state.mode||"basic";if(!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}if(isMemberRole()&&!hasRemainingTime()){goHoursAfterSetup();return}showAnalysis();if(returningFromSettings)setRoadVisible(true)}
 function closeHourConfirm(){document.getElementById("hvHourConfirm")?.remove()}
 async function loadHours(){if(!state.isMember){state.hourInventory=[];state.hourHistory=[];state.usedTotal=0;return null}const d=await rpc("hv_analysis_member_hours_v1");state.hourInventory=Array.isArray(d?.available)?d.available:[];state.hourHistory=Array.isArray(d?.used)?d.used:[];state.activeUntil=d?.active_until||state.activeUntil;state.lastHoursGeneration=Math.max(Number(state.lastHoursGeneration||0),Number(d?.hours_generation??d?.generation??0));state.usedTotal=Number(d?.total_activated_hours||0);return d}
