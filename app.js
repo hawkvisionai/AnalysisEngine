@@ -185,6 +185,10 @@
       for(let from=0;;from+=1000){
         const {data,error}=await hc.from("games")
           .select("shoe_id,game_number,winner")
+          // 固定排序後再分頁：避免 Supabase range() 無排序時不同查詢取得不同歷史集合，
+          // 造成 reverse7 / reverse8 在相同牌局序列下出現不同 D9 原始判定。
+          .order("shoe_id",{ascending:true})
+          .order("game_number",{ascending:true})
           .range(from,from+999);
         if(error)throw error;
         const batch=Array.isArray(data)?data:[];
@@ -280,7 +284,11 @@
     if(sampleCount<=0||Math.abs(B-P)<1e-9)return null;
 
     console.debug("[HawkVision Reverse D9]",{
-      rounds:rounds.length,sig,excludeShoe,B,P,sampleCount,
+      method:state.strategyMethod,
+      rounds:rounds.length,
+      sequence:rounds.map(outcomeCodeWithTie).join(""),
+      window9:codes.join(""),
+      sig,excludeShoe,B,P,sampleCount,
       result:B>P?"莊":"閒"
     });
 
@@ -306,7 +314,7 @@
     const hc=window.hvAnalysisAuthClient;
     if(!hc)throw new Error("登入資料庫連線尚未完成");
     if(!state._genericHistory){
-      const rows=[];for(let from=0;;from+=1000){const {data,error}=await hc.from("games").select("shoe_id,game_number,winner").range(from,from+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break}
+      const rows=[];for(let from=0;;from+=1000){const {data,error}=await hc.from("games").select("shoe_id,game_number,winner").order("shoe_id",{ascending:true}).order("game_number",{ascending:true}).range(from,from+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break}
       const by=new Map();for(const g of rows){if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);by.get(g.shoe_id).push(g)}
       state._genericHistory=[...by.values()].map(a=>a.sort((x,y)=>Number(x.game_number)-Number(y.game_number)).map(x=>x.winner));
     }
