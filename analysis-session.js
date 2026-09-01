@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.50";
+const VERSION="3.4.51";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;

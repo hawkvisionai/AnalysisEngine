@@ -74,9 +74,29 @@
     state.historyLoading = (async () => {
       try {
         const cached = JSON.parse(sessionStorage.getItem(BASIC_INDEX_CACHE_KEY) || "null");
-        if (cached && Date.now()-Number(cached.savedAt||0) < BASIC_INDEX_TTL_MS && Array.isArray(cached.m9t)) {
+        if (
+          cached &&
+          Date.now()-Number(cached.savedAt||0) < BASIC_INDEX_TTL_MS &&
+          Array.isArray(cached.m9t) &&
+          Array.isArray(cached.reverseStruct) &&
+          Array.isArray(cached.reverseShoes)
+        ) {
           const maps={6:new Map(cached.m6||[]),9:new Map(cached.m9||[]),"9T":new Map(cached.m9t||[])};
           state.historyIndex=maps;
+          state._reverseD9StructMap=new Map(cached.reverseStruct||[]);
+          state._reverseD9HistoryShoes=(cached.reverseShoes||[]).map(x=>({
+            shoeId:x.shoeId,
+            seq:Array.isArray(x.seq)?x.seq:[],
+            codes:Array.isArray(x.codes)?x.codes:[]
+          }));
+          state._reverseD9HistoryMeta={
+            rowCount:Number(cached.reverseMeta?.rowCount||0),
+            shoeCount:state._reverseD9HistoryShoes.length,
+            keyCount:state._reverseD9StructMap.size,
+            loadedAt:Number(cached.savedAt||Date.now()),
+            source:"shared-basic-cache"
+          };
+          state._reverseD9LastError=null;
           return maps;
         }
       } catch (_) {}
@@ -107,8 +127,10 @@
       }
 
       const maps = {6:new Map(),9:new Map(),"9T":new Map()};
+      const reverseStructMap=new Map();
+      const reverseShoes=[];
 
-      for (const games of byShoe.values()) {
+      for (const [shoeId,games] of byShoe.entries()) {
         games.sort((a,b) => Number(a.game_number||0) - Number(b.game_number||0));
 
         // 原基礎 D6 / D9：和局不佔有效局位置。
@@ -130,26 +152,48 @@
         // 逆平 D9：使用最近 9 個「實際 B/P/T 物理結果」，
         // 與驗證研究一致；Tie 會佔 D9 的一個位置。
         const physical = games
-          .map(g => ({code:outcomeCodeWithTie(g.winner), winner:g.winner}))
-          .filter(x => x.code);
+          .map(g => ({code:outcomeCodeWithTie(g.winner), winner:normalizeWinner(g.winner)}))
+          .filter(x => x.code && x.winner);
+
+        const shoeIndex=reverseShoes.length;
+        const seq=physical.map(x=>x.winner);
+        const codes=physical.map(x=>x.code);
+        reverseShoes.push({shoeId,seq,codes});
 
         for(let j=9;j<physical.length;j+=1){
           const sig=runSig(physical.slice(j-9,j).map(x=>x.code));
           const next=physical[j].winner;
+
           let rec=maps["9T"].get(sig);
           if(!rec){rec={莊:0,閒:0};maps["9T"].set(sig,rec)}
-          // 研究核心在選方向時只累計下一局 B/P；下一局若是 Tie 不投票。
           if(next==="莊"||next==="閒")rec[next]+=1;
+
+          if(!reverseStructMap.has(sig))reverseStructMap.set(sig,[]);
+          reverseStructMap.get(sig).push({next,shoe:shoeIndex,shoeId});
         }
       }
 
       state.historyIndex=maps;
+      state._reverseD9StructMap=reverseStructMap;
+      state._reverseD9HistoryShoes=reverseShoes;
+      state._reverseD9HistoryMeta={
+        rowCount:rows.length,
+        shoeCount:reverseShoes.length,
+        keyCount:reverseStructMap.size,
+        loadedAt:Date.now(),
+        source:"shared-basic-live"
+      };
+      state._reverseD9LastError=null;
+
       try{
         sessionStorage.setItem(BASIC_INDEX_CACHE_KEY,JSON.stringify({
           savedAt:Date.now(),
           m6:[...maps[6]],
           m9:[...maps[9]],
-          m9t:[...maps["9T"]]
+          m9t:[...maps["9T"]],
+          reverseStruct:[...reverseStructMap],
+          reverseShoes:reverseShoes.map(x=>({shoeId:x.shoeId,seq:x.seq,codes:x.codes})),
+          reverseMeta:{rowCount:rows.length}
         }));
       }catch(_){}
       return maps;
@@ -160,89 +204,24 @@
   }
 
   async function loadReverseD9StructureMap(){
-    // RC51：逆平 D9 回到研究版已驗證的 authenticated Supabase 讀法。
-    // 5,000 / 7,000 共用同一份歷史結構快照；同鞋內不重建。
+    // RC52：Reverse D9 不再自行第二次查資料庫。
+    // 直接共用 Basic 已驗證可工作的同一批歷史 rows，同步建立含來源牌靴的 D9 索引。
     if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
       return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
     }
-    if(state._reverseD9Loading)return state._reverseD9Loading;
 
-    state._reverseD9Loading=(async()=>{
-      const hc=window.hvAnalysisAuthClient;
-      if(!hc)throw new Error("HV_REVERSE_AUTH_CLIENT_NOT_READY");
+    await loadBasicHistoryIndex();
 
-      const {data:{session:authSession},error:sessionError}=await hc.auth.getSession();
-      if(sessionError||!authSession?.access_token)throw new Error("HV_REVERSE_AUTH_SESSION_MISSING");
-
-      const rows=[];
-      for(let from=0;;from+=1000){
-        const {data,error}=await hc.from("games")
-          .select("shoe_id,game_number,winner")
-          .order("shoe_id",{ascending:true})
-          .order("game_number",{ascending:true})
-          .range(from,from+999);
-        if(error)throw new Error("HV_REVERSE_HISTORY_QUERY_FAILED:"+String(error.code||error.message||"unknown"));
-        const batch=Array.isArray(data)?data:[];
-        rows.push(...batch);
-        if(batch.length<1000)break;
-        if(rows.length>50000)throw new Error("HV_REVERSE_HISTORY_TOO_LARGE");
-      }
-      if(rows.length===0)throw new Error("HV_REVERSE_HISTORY_EMPTY");
-
-      const by=new Map();
-      for(const g of rows){
-        const w=normalizeWinner(g.winner);
-        if(!w)continue;
-        if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);
-        by.get(g.shoe_id).push({
-          shoe_id:g.shoe_id,
-          game_number:Number(g.game_number||0),
-          winner:w
-        });
-      }
-
-      const shoes=[];
-      const map=new Map();
-
-      for(const [shoeId,games] of by){
-        games.sort((a,b)=>a.game_number-b.game_number);
-        const seq=games.map(g=>g.winner);
-        const codes=seq.map(outcomeCodeWithTie);
-        const shoeIndex=shoes.length;
-        shoes.push({shoeId,seq,codes});
-
-        // 與研究版 testBasic(groups,9) 的 D 路型結構完全一致。
-        for(let i=9;i<seq.length;i++){
-          const sig=runSig(codes.slice(i-9,i));
-          const rec={next:seq[i],shoe:shoeIndex,shoeId};
-          if(!map.has(sig))map.set(sig,[]);
-          map.get(sig).push(rec);
-        }
-      }
-
-      if(shoes.length===0||map.size===0)throw new Error("HV_REVERSE_HISTORY_INDEX_EMPTY");
-
-      state._reverseD9StructMap=map;
-      state._reverseD9HistoryShoes=shoes;
-      state._reverseD9HistoryMeta={
-        rowCount:rows.length,
-        shoeCount:shoes.length,
-        keyCount:map.size,
-        loadedAt:Date.now(),
-        source:"authenticated"
-      };
-      state._reverseD9LastError=null;
-      return {map,shoes};
-    })();
-
-    try{
-      return await state._reverseD9Loading;
-    }catch(error){
-      state._reverseD9LastError=String(error?.message||error||"unknown");
-      throw error;
-    }finally{
-      state._reverseD9Loading=null;
+    if(!(state._reverseD9StructMap instanceof Map) || !Array.isArray(state._reverseD9HistoryShoes)){
+      state._reverseD9LastError="HV_REVERSE_SHARED_INDEX_MISSING";
+      throw new Error(state._reverseD9LastError);
     }
+    if(state._reverseD9StructMap.size===0 || state._reverseD9HistoryShoes.length===0){
+      state._reverseD9LastError="HV_REVERSE_SHARED_INDEX_EMPTY";
+      throw new Error(state._reverseD9LastError);
+    }
+
+    return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
   }
 
   function detectReverseTargetShoe(rounds,shoes){
@@ -978,6 +957,9 @@
     state._reverseD9Loading = null;
     state._reverseD9HistoryMeta = null;
     state._reverseD9LastError = null;
+    state.historyIndex = null;
+    state.historyLoading = null;
+    try{sessionStorage.removeItem(BASIC_INDEX_CACHE_KEY)}catch(_){}
 
     state.rounds = [];
     state.analysisStarted = false;
