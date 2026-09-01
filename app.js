@@ -160,37 +160,34 @@
   }
 
   async function loadReverseD9StructureMap(){
-    // 逆平 D9 必須和基礎歷史索引讀取「同一份完整 games 歷史資料」。
-    // 不使用會員登入身分直接查 games，避免 Supabase RLS 依會員身分裁切歷史牌靴，
-    // 導致 D9 結構候選大量缺失而長時間顯示「等待有效訊號」。
+    // RC51：逆平 D9 回到研究版已驗證的 authenticated Supabase 讀法。
+    // 5,000 / 7,000 共用同一份歷史結構快照；同鞋內不重建。
     if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
       return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
     }
     if(state._reverseD9Loading)return state._reverseD9Loading;
 
     state._reverseD9Loading=(async()=>{
-      if(!window.supabase || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY)
-        throw new Error("歷史資料庫設定不存在");
-      const hc=window.supabase.createClient(
-        cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,
-        {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
-      );
+      const hc=window.hvAnalysisAuthClient;
+      if(!hc)throw new Error("HV_REVERSE_AUTH_CLIENT_NOT_READY");
+
+      const {data:{session:authSession},error:sessionError}=await hc.auth.getSession();
+      if(sessionError||!authSession?.access_token)throw new Error("HV_REVERSE_AUTH_SESSION_MISSING");
 
       const rows=[];
       for(let from=0;;from+=1000){
         const {data,error}=await hc.from("games")
           .select("shoe_id,game_number,winner")
-          // 固定排序後再分頁：避免 Supabase range() 無排序時不同查詢取得不同歷史集合，
-          // 造成 reverse7 / reverse8 在相同牌局序列下出現不同 D9 原始判定。
           .order("shoe_id",{ascending:true})
           .order("game_number",{ascending:true})
           .range(from,from+999);
-        if(error)throw error;
+        if(error)throw new Error("HV_REVERSE_HISTORY_QUERY_FAILED:"+String(error.code||error.message||"unknown"));
         const batch=Array.isArray(data)?data:[];
         rows.push(...batch);
         if(batch.length<1000)break;
-        if(rows.length>50000)throw new Error("歷史資料筆數異常");
+        if(rows.length>50000)throw new Error("HV_REVERSE_HISTORY_TOO_LARGE");
       }
+      if(rows.length===0)throw new Error("HV_REVERSE_HISTORY_EMPTY");
 
       const by=new Map();
       for(const g of rows){
@@ -214,7 +211,7 @@
         const shoeIndex=shoes.length;
         shoes.push({shoeId,seq,codes});
 
-        // 逐字照研究版 testBasic(groups,9) 的 D 路型結構候選建立方式。
+        // 與研究版 testBasic(groups,9) 的 D 路型結構完全一致。
         for(let i=9;i<seq.length;i++){
           const sig=runSig(codes.slice(i-9,i));
           const rec={next:seq[i],shoe:shoeIndex,shoeId};
@@ -223,16 +220,29 @@
         }
       }
 
-      if(map.size===0)throw new Error("逆平 D9 歷史結構索引為空");
+      if(shoes.length===0||map.size===0)throw new Error("HV_REVERSE_HISTORY_INDEX_EMPTY");
 
       state._reverseD9StructMap=map;
       state._reverseD9HistoryShoes=shoes;
-      state._reverseD9HistoryMeta={rowCount:rows.length,shoeCount:shoes.length,keyCount:map.size,loadedAt:Date.now()};
+      state._reverseD9HistoryMeta={
+        rowCount:rows.length,
+        shoeCount:shoes.length,
+        keyCount:map.size,
+        loadedAt:Date.now(),
+        source:"authenticated"
+      };
+      state._reverseD9LastError=null;
       return {map,shoes};
     })();
 
-    try{return await state._reverseD9Loading}
-    finally{state._reverseD9Loading=null}
+    try{
+      return await state._reverseD9Loading;
+    }catch(error){
+      state._reverseD9LastError=String(error?.message||error||"unknown");
+      throw error;
+    }finally{
+      state._reverseD9Loading=null;
+    }
   }
 
   function detectReverseTargetShoe(rounds,shoes){
@@ -871,15 +881,19 @@
 
       if (!auto) showToast("分析完成");
     } catch (error) {
-      // 會員端不顯示技術錯誤或歷史搜尋細節。
+      // 正式會員畫面絕不顯示 DB / RLS / Supabase / 查詢失敗原因。
+      // 技術狀態只保留在內部 console 與 core diagnostic。
       state.pendingPrediction = null;
       window.HawkVisionSessionPolicy?.clearPublicSignal?.();
       showNoSignalState();
       refreshSuggestedBet();
-      setDbStatus(error?.message?.includes("57014") || error?.message?.includes("statement timeout") ? "歷史分析資料正在逾時，請執行 v3.1 SQL 優化" : "資料庫連線或函式有誤", "error");
-      showToast("分析暫時無法使用");
       saveSession();
-      console.error(error);
+      console.error("[HawkVision Reverse Internal]",{
+        method:state.strategyMethod,
+        rounds:state.rounds.length,
+        historyMeta:state._reverseD9HistoryMeta||null,
+        internalError:String(error?.message||error||"unknown")
+      });
     } finally {
       setAnalyzing(false);
     }
@@ -963,6 +977,7 @@
     state._reverseD9HistoryShoes = null;
     state._reverseD9Loading = null;
     state._reverseD9HistoryMeta = null;
+    state._reverseD9LastError = null;
 
     state.rounds = [];
     state.analysisStarted = false;
@@ -1006,6 +1021,7 @@
     getStrategyMethod(){ return state.strategyMethod; },
     getPendingPrediction(){ return state.pendingPrediction; },
     getReverseD9HistoryMeta(){ return state._reverseD9HistoryMeta ? {...state._reverseD9HistoryMeta} : null; },
+    getReverseD9InternalError(){ return state._reverseD9LastError||null; },
     recomputeCurrent(){ return state.analysisStarted ? analyze(true) : Promise.resolve(); },
     analyzeNow(){ return analyze(false); },
     resetEvaluationStatsPreserveShoe(){
