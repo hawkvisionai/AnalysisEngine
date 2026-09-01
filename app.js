@@ -319,7 +319,11 @@
   }
   async function searchStrategyCore(){
     const m=state.strategyMethod||"";
-    if(m==="reverse7"||m==="reverse8")return searchReverseD9Structure(state.rounds); // 驗證版 D9：實際9局 B/P/T、Tie 佔位、完全路型結構
+    if(m==="reverse7"||m==="reverse8"){
+      // 穩健逆平 / 均衡逆平的「分析訊號完全相同」：
+      // 都是同一套 D9 + Player-only。差異只能存在於配注率與等待控制。
+      return searchReverseD9Structure(state.rounds);
+    }
     if(m==="b3_11371531_nostop")return searchSequenceCore("B",3,state.rounds.filter(x=>x!=="和"));
     if(m==="c10_1371531_recover")return searchSequenceCore("C",10,state.rounds.filter(x=>x!=="和"));
     return searchRoadStructure(state.rounds.filter(x=>x!=="和"));
@@ -936,8 +940,10 @@
     renderAll();
     saveSession();
 
-    const nonTieCount = state.rounds.filter(result => result !== "和").length;
-    if (state.analysisStarted && nonTieCount >= Number(els.lookback.value)) {
+    const readyCount=["reverse7","reverse8"].includes(state.strategyMethod)
+      ? state.rounds.length
+      : state.rounds.filter(result => result !== "和").length;
+    if (state.analysisStarted && readyCount >= Number(els.lookback.value)) {
       analyze(true);
     } else {
       resetAnalysisDisplay();
@@ -976,8 +982,18 @@
   window.HawkVisionAnalysisCore={
     captureExactSnapshot(){return captureExactSnapshot();},
     restoreExactSnapshot(saved){return restoreExactSnapshot(saved);},
-    setStrategy(method){ state.strategyMethod = method || null; },
+    setStrategy(method){
+      const next=method||null;
+      if(state.strategyMethod!==next){
+        state.strategyMethod=next;
+        state.pendingPrediction=null;
+      }else{
+        state.strategyMethod=next;
+      }
+    },
+    getStrategyMethod(){ return state.strategyMethod; },
     getPendingPrediction(){ return state.pendingPrediction; },
+    recomputeCurrent(){ return state.analysisStarted ? analyze(true) : Promise.resolve(); },
     analyzeNow(){ return analyze(false); },
     resetEvaluationStatsPreserveShoe(){
       state.evaluations=state.rounds.map(()=>null);

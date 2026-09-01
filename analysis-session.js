@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.42";
+const VERSION="3.4.43";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -261,14 +261,31 @@ function enterAnalysisFromSetupButton(){
      state.unitPoints=calculatedUnit();
    }
 
+   const previousMethod=carry?.method||window.HawkVisionAnalysisCore?.getStrategyMethod?.()||null;
+   const strategyChanged=!!previousMethod&&previousMethod!==state.method;
+
    state.manualEdited=false;
    state.pendingSettingsCommit=false;
    state.editingSettings=false;
+
+   if(strategyChanged){
+     // 只重置「打法控制狀態」，目前遊戲點數 / 本次輸贏 / 已輸入牌局保留。
+     state.progressionIndex=0;
+     state.currentPublicBetAllowed=false;
+     state.reverseHundredUsed=false;
+     resetCorePause();
+   }
 
    window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
    window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
    queueSave();
    showAnalysis();
+
+   // 若原本已在分析中，切換打法後不得等到下一局才更新。
+   // 用現在已輸入的牌局立即重新取得新打法的下一局判定。
+   if(state.analysisActive && strategyRoundCount()>=requiredGames()){
+     Promise.resolve(window.HawkVisionAnalysisCore?.recomputeCurrent?.()).catch(e=>console.error("切換打法重新分析失敗",e));
+   }
  }catch(err){
    console.error("分析設定進入分析失敗",err);
    setErr("無法進入分析："+(err?.message||String(err)));
@@ -475,7 +492,12 @@ function renderPasswordClaim(){beginView("password");state.passwordClaim=true;sh
 async function submitPasswordClaim(){const p1=$("hvNewPassword")?.value||"",p2=$("hvNewPassword2")?.value||"";if(p1.length<8){setErr("新密碼至少需要 8 個字元");return}if(p1!==p2){setErr("兩次輸入的新密碼不一致");return}const {data:{session}}=await client.auth.getSession();if(!session?.access_token){setErr("登入狀態已失效，請重新登入");return}$("hvEntryNext").disabled=true;try{const res=await fetch(ADMIN_API+"/claim-password",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({new_password:p1})});const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok)throw new Error(d.error||"密碼設定失敗");const {data:verify}=await client.from("profiles").select("must_change_password").eq("id",session.user.id).maybeSingle();if(verify?.must_change_password===true)throw new Error("密碼已送出但首次登入狀態尚未解除，請稍後再試");sessionStorage.setItem("hv-force-login-message","密碼設定成功，請使用新密碼重新登入");await window.hvGlobalLogout?.()}catch(e){setErr(e.message||String(e));$("hvEntryNext").disabled=false}}
 
 window.HawkVisionSessionPolicy={
- isPredictionPublic(){const allowed=coreBetAllowed();state.currentPublicBetAllowed=allowed===true;return state.currentPublicBetAllowed},
+ isPredictionPublic(){
+   const i=info();
+   const allowed=(i?.pause==="none")?true:coreBetAllowed();
+   state.currentPublicBetAllowed=allowed===true;
+   return state.currentPublicBetAllowed;
+ },
  clearPublicSignal(){state.currentPublicBetAllowed=false;if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested()},
  hasBettableDecision(){return hasBettableDecision()},
  undoLastRound(){return undoLastRoundExact()},
