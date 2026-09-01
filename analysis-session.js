@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.37";
+const VERSION="3.4.38";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -144,7 +144,7 @@ function setRoadVisible(open){
 }
 function toggleRoad(){setRoadVisible(!document.body.classList.contains("hv-road-open"))}
 function setupRoadToggle(){[$("hvRoadToggleDesktop"),$("hvRoadToggleMobile")].filter(Boolean).forEach(b=>b.addEventListener("click",toggleRoad))}
-function showAnalysis(){beginView("analysis");hideShell();document.body.classList.add("hv-analysis-visible");document.body.classList.toggle("hv-basic-mode",state.mode==="basic");state.entered=true;renderModeStatus();updatePointCards();$("hvResultMoney")?.classList.toggle("show",!state.skippedSetup);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();if(isMemberRole())$("hvMemberTimeBlock")?.classList.add("show");else $("hvMemberTimeBlock")?.classList.remove("show");if(state.mode==="basic")state.noCommission=false;setCommission(state.noCommission);document.querySelector(".hv-commission-inline")?.classList.toggle("hv-hidden-basic",state.mode==="basic");syncStartControls();setRoadVisible(!(state.analysisActive||state.bettingActive));updateTimeUI()}
+function showAnalysis(){beginView("analysis");hideShell();document.body.classList.add("hv-analysis-visible");document.body.classList.toggle("hv-basic-mode",state.mode==="basic");state.entered=true;normalizePointState("points");renderModeStatus();updatePointCards();$("hvResultMoney")?.classList.toggle("show",!state.skippedSetup);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();if(isMemberRole())$("hvMemberTimeBlock")?.classList.add("show");else $("hvMemberTimeBlock")?.classList.remove("show");if(state.mode==="basic")state.noCommission=false;setCommission(state.noCommission);document.querySelector(".hv-commission-inline")?.classList.toggle("hv-hidden-basic",state.mode==="basic");syncStartControls();setRoadVisible(!(state.analysisActive||state.bettingActive));updateTimeUI()}
 function hideAnalysis(){document.body.classList.remove("hv-analysis-visible");document.body.classList.remove("hv-basic-mode")}
 function setErr(m=""){if($("hvEntryError"))$("hvEntryError").textContent=m}
 function brandTitle(extra=""){return `<span class="hv-brand-lockup"><img src="hawkvision-logo.png" alt="HawkVision"><span class="hv-brand-copy"><b><i>Hawk</i><em>Vision</em></b><small>SEE EVERY MOVE. STAY AHEAD.</small></span></span>${extra}`}
@@ -155,6 +155,38 @@ function renderModeStatus(){const el=$("hvModeStatus");if(!el)return;const actua
 window.HawkVisionModeState={setActualMode(mode,notice=""){state.actualMode=["basic","counting","full"].includes(mode)?mode:"basic";state.modeNotice=String(notice||"");renderModeStatus();queueSave()},markIncomplete(){if(state.mode==="counting"){state.actualMode="basic";state.modeNotice="輸入資料不完整，已切換成基礎模式"}else if(state.mode==="full"){state.actualMode="basic";state.modeNotice="完整資料輸入中，已切換成基礎模式"}renderModeStatus()},restoreFull(){if(state.mode==="full"){state.actualMode="full";state.modeNotice="";renderModeStatus()}},reset(){state.actualMode=state.mode||"basic";state.modeNotice="";renderModeStatus()}};
 function warningData(){const i=info();if(!i||state.points<=0)return null;const rec=methodRecommendedPoints(i);if(i.reverse){if(state.points===rec)return ["green","建議點數設定","本次帶入點數符合歷史回測建議點數。此建議已考量歷史回測與限紅因素；點數越高不代表點數使用效益越高。"];return ["red","建議點數設定",`此玩法建議帶入 ${fmt(rec)} 點。此建議已考量歷史回測與限紅因素；點數越高不代表點數使用效益越高。`]}
  const base=rec/1.5,pct=((state.points-base)/base)*100;if(state.points>=rec)return ["green","點數準備已達建議標準",`建議準備：${i.units}注（${fmt(rec)}點）。`];if(pct<=10)return ["red","安全緩衝偏低",`本次帶入點數的安全緩衝偏低。建議準備：${i.units}注。`];if(pct<30)return ["orange","安全緩衝較少",`建議提高點數準備。建議準備：${i.units}注。`];return ["yellow","已有一定安全緩衝",`尚未達建議準備標準。建議準備：${i.units}注。`]}
+
+function setupCarrySnapshot(){
+ return state.editingSettings&&state.settingsSnapshot?state.settingsSnapshot:null;
+}
+function applyMethodDefaultPoints(method){
+ const z=methodInfo[method]||null;
+ if(!z)return;
+ const carry=setupCarrySnapshot();
+ if(carry){
+   state.points=Math.max(0,Number(carry.points)||0);
+   state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);
+   state.profit=Number(carry.profit)||0;
+   normalizePointState("points");
+ }else{
+   const v=methodRecommendedPoints(z);
+   state.points=v;
+   state.initialPoints=v;
+   state.profit=0;
+ }
+ state.unitPoints=z.reverse?0:100;
+ state.manualEdited=false;
+}
+function restoreCarryPointsWhileChoosing(){
+ const carry=setupCarrySnapshot();
+ if(!carry)return false;
+ state.points=Math.max(0,Number(carry.points)||0);
+ state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);
+ state.profit=Number(carry.profit)||0;
+ normalizePointState("points");
+ state.manualEdited=false;
+ return true;
+}
 function snapshotSettings(){return {mode:state.mode,family:state.family,method:state.method,points:state.points,initialPoints:state.initialPoints,profit:state.profit,skippedSetup:state.skippedSetup,analysisActive:state.analysisActive,bettingActive:state.bettingActive,progressionIndex:state.progressionIndex,noCommission:state.noCommission,actualMode:state.actualMode,modeNotice:state.modeNotice,unitPoints:state.unitPoints,corePause:JSON.parse(JSON.stringify(state.corePause||freshCorePause())),reverseHundredUsed:!!state.reverseHundredUsed}}
 function restoreSettingsSnapshot(){const x=state.settingsSnapshot;if(!x)return;Object.assign(state,x);state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.manualEdited=false}
 function enterAnalysisFromSetupButton(){
@@ -181,16 +213,33 @@ function enterAnalysisFromSetupButton(){
    }
 
    const input=$("hvPointsInput");
+   const carry=setupCarrySnapshot();
    let v=Number(String(input?.value??state.points??"").replace(/\D/g,""));
-   if(!Number.isFinite(v)||v<=0){
+   if(carry&&!state.manualEdited){
+     state.points=Math.max(0,Number(carry.points)||0);
+     state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);
+     state.profit=Number(carry.profit)||0;
+     normalizePointState("points");
+     v=state.points;
+     if(input)input.value=String(Math.floor(v));
+   }else if(!Number.isFinite(v)||v<=0){
      v=methodRecommendedPoints(z);
      state.points=v;
-     state.initialPoints=v;
+     if(carry){
+       state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);
+       normalizePointState("points");
+     }else{
+       state.initialPoints=v;
+       state.profit=0;
+     }
      if(input)input.value=String(v);
    }else{
      v=Math.min(CAP,Math.max(0,v));
      state.points=v;
-     if(state.manualEdited){
+     if(carry){
+       state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);
+       normalizePointState("points");
+     }else{
        state.initialPoints=v;
        state.profit=0;
      }
@@ -301,20 +350,20 @@ function renderSetup(){
    });
  }
  beginView("setup");showShell();setErr("");state.mode="basic";if(state.family==="goal")state.family=null;
- $("hvEntryTitle").innerHTML=`<span class="hv-setup-brand"><img src="hawkvision-logo.png" alt="HawkVision"><span><strong>HawkVision</strong><small>ANALYSIS ENGINE</small></span></span>`;$("hvEntryHint").textContent="";["hvEntryBack","hvEntrySkip","hvEntryNext"].forEach(id=>$(id).style.display="none");
+ $("hvEntryTitle").innerHTML=brandTitle("");$("hvEntryHint").textContent="";["hvEntryBack","hvEntrySkip","hvEntryNext"].forEach(id=>$(id).style.display="none");
  const activeStyle=(state.family&&STYLE_INFO[state.family]?state.family:methodStyleKey()),i=activeStyle?info():null,warn=activeStyle?warningData():null,canPoints=!!(activeStyle&&state.method);
  const card=k=>{const x=STYLE_INFO[k],sel=activeStyle===k;const desc=sel&&state.method?(i.reverse?(i===methodInfo.reverse7?"依目前點數動態調整下注點數，著重點數承受度與穩定性。":"依目前點數動態調整下注點數，在點數運用與收益能力之間取得平衡。"):(k==="tempo"?"依分析訊號控制出手節奏，條件適合時進場。":k==="active"?"提高點數運用與收益潛力，同時承受較高波動。":"依所選層級執行對應的分析與點數控制。")):"";return `<div class="hv-style-card ${sel?"selected":""}" data-style="${k}"><div class="hv-style-head"><b>${x.icon} ${x.name}</b></div><p>${x.brief}</p><div class="hv-level-wrap">${sel?`<div class="hv-level-label">選擇層級</div><div class="hv-levels">${x.methods.map(m=>{const z=methodInfo[m];return `<button type="button" data-method="${m}" class="${state.method===m?"selected":""}">${z.level}</button>`}).join("")}</div><div class="hv-level-desc ${state.method?"show":""}">${desc}</div>`:""}</div></div>`};
  const need=i?(i.reverse?`${fmt(i.recommendedPoints)}點`:`${i.units}注`):"—";
  let html=`<div class="hv-goal-setup"><section class="hv-goal-main"><div class="hv-goal-kicker"><span>分析設定</span> 選擇適合你的玩法風格</div><h2>選擇玩法風格</h2><p class="hv-goal-sub">先依照偏好的出手節奏與點數運用方式選擇風格，再於該風格內選擇層級。</p><div class="hv-style-grid"><div class="hv-style-col ${activeStyle==="stable"||activeStyle==="tempo"?"has-open":""}">${card("stable")}${card("tempo")}</div><div class="hv-style-col ${activeStyle==="balanced"||activeStyle==="active"?"has-open":""}">${card("balanced")}${card("active")}</div></div></section><aside class="hv-goal-side"><h2>本次分析設定</h2><div class="hv-goal-summary"><div><span>玩法風格</span><b>${activeStyle?STYLE_INFO[activeStyle].name:"—"}</b></div><div><span>選擇層級</span><b>${i?i.level:"—"}</b></div><div><span>建議準備</span><b>${need}</b></div></div><label class="hv-point-label">本次帶入點數</label><input id="hvPointsInput" class="hv-point-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" value="${canPoints?Math.min(CAP,Math.floor(state.points)):""}" ${canPoints?"":"disabled"}><div class="hv-goal-warning ${warn?warn[0]:"empty"}">${warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}</div><div class="hv-legend"><i></i><i></i><i></i><i></i></div><div class="hv-goal-bottom"><div class="hv-goal-status">${isMemberRole()?(hasRemainingTime()?"會員・有剩餘時數":"會員・無剩餘時數"):"管理帳號"}</div><button id="hvInlineEnter" type="button">${isMemberRole()&&!hasRemainingTime()?"開啟時數包":"進入分析"}</button></div></aside></div>`;
  $("hvEntryBody").innerHTML=html;
- $("hvEntryBody").querySelectorAll("[data-style]").forEach(c=>c.onclick=e=>{if(e.target.closest("[data-method]"))return;const k=c.dataset.style;if(activeStyle===k){state.family=null;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false;document.activeElement?.blur?.()}else{state.family=k;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false}renderSetup()});
- $("hvEntryBody").querySelectorAll("[data-method]").forEach(b=>b.onclick=e=>{e.stopPropagation();state.method=b.dataset.method;const z=info();state.points=methodRecommendedPoints(z);state.initialPoints=state.points;state.profit=0;state.unitPoints=z.reverse?0:100;state.manualEdited=false;renderSetup();const mobile=matchMedia("(max-width:700px)").matches;const input=$("hvPointsInput");if(input){input.focus();try{const n=input.value.length;input.setSelectionRange(n,n)}catch(_){ }if(mobile){requestAnimationFrame(()=>{const shell=$("hvEntryShell"),side=document.querySelector(".hv-goal-side");if(shell&&side){shell.scrollTo({top:Math.max(0,side.offsetTop-8),behavior:"smooth"})}})}}});
- $("hvPointsInput")?.addEventListener("input",e=>{const raw=String(e.target.value).replace(/\D/g,"").slice(0,10);e.target.value=raw;state.points=Math.min(CAP,Number(raw||0));state.manualEdited=true;renderDynamicSetupBits()});
+ $("hvEntryBody").querySelectorAll("[data-style]").forEach(c=>c.onclick=e=>{if(e.target.closest("[data-method]"))return;const k=c.dataset.style;if(activeStyle===k){state.family=null;state.method=null;if(!restoreCarryPointsWhileChoosing()){state.points=0;state.initialPoints=0;state.profit=0}state.unitPoints=0;state.manualEdited=false;document.activeElement?.blur?.()}else{state.family=k;state.method=null;if(!restoreCarryPointsWhileChoosing()){state.points=0;state.initialPoints=0;state.profit=0}state.unitPoints=0;state.manualEdited=false}renderSetup()});
+ $("hvEntryBody").querySelectorAll("[data-method]").forEach(b=>b.onclick=e=>{e.stopPropagation();state.method=b.dataset.method;const z=info();applyMethodDefaultPoints(state.method);renderSetup();const mobile=matchMedia("(max-width:700px)").matches;const input=$("hvPointsInput");if(input){input.focus();try{const n=input.value.length;input.setSelectionRange(n,n)}catch(_){ }if(mobile){requestAnimationFrame(()=>{const shell=$("hvEntryShell"),side=document.querySelector(".hv-goal-side");if(shell&&side){shell.scrollTo({top:Math.max(0,side.offsetTop-8),behavior:"smooth"})}})}}});
+ $("hvPointsInput")?.addEventListener("input",e=>{const raw=String(e.target.value).replace(/\D/g,"").slice(0,10);e.target.value=raw;state.points=Math.min(CAP,Number(raw||0));state.manualEdited=true;const carry=setupCarrySnapshot();if(carry){state.initialPoints=Math.max(0,Number(carry.initialPoints)||0);normalizePointState("points")}else{state.initialPoints=state.points;state.profit=0}renderDynamicSetupBits()});
  const inlineEnter=$("hvInlineEnter");if(inlineEnter){inlineEnter.disabled=false;inlineEnter.onclick=e=>{e.preventDefault();enterAnalysisFromSetupButton();};}
 }
 function renderDynamicSetupBits(){const i=info(),warn=warningData();const box=document.querySelector(".hv-goal-warning");if(box){box.className=`hv-goal-warning ${warn?warn[0]:"empty"}`;box.innerHTML=warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}}
 function validateSetup(){if(!setupComplete())return false;const v=Math.min(CAP,Math.max(0,Number($("hvPointsInput")?.value||state.points||0)));if(!Number.isFinite(v))return false;state.points=v;state.skippedSetup=false;return true}
-function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){state.initialPoints=state.points;state.profit=0}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){window.HawkVisionAnalysisCore?.resetShoe?.();state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;state.officialHistory=[];state.skipSettlement=false;resetCorePause()}state.actualMode=state.mode||"basic";state.modeNotice="";state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.editingSettings=false;state.manualEdited=false;state.setupComplete=true;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}
+function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){if(before){state.initialPoints=Math.max(0,Number(before.initialPoints)||0);normalizePointState("points")}else{state.initialPoints=state.points;state.profit=0}}else if(before){state.points=Math.max(0,Number(before.points)||0);state.initialPoints=Math.max(0,Number(before.initialPoints)||0);state.profit=Number(before.profit)||0;normalizePointState("points")}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){window.HawkVisionAnalysisCore?.resetShoe?.();state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;state.officialHistory=[];state.skipSettlement=false;resetCorePause()}state.actualMode=state.mode||"basic";state.modeNotice="";state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.editingSettings=false;state.manualEdited=false;state.setupComplete=true;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}
 function enterFromSetup(){if(!validateSetup())return;const returningFromSettings=state.editingSettings;if(state.editingSettings)state.pendingSettingsCommit=true;if(state.pendingSettingsCommit)commitSettings();else{state.setupComplete=true;state.actualMode=state.mode||"basic";if(!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;window.HawkVisionAnalysisCore?.setStrategy?.(state.method);window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());queueSave()}if(isMemberRole()&&!hasRemainingTime()){goHoursAfterSetup();return}showAnalysis();if(returningFromSettings)setRoadVisible(true)}
 function closeHourConfirm(){document.getElementById("hvHourConfirm")?.remove()}
 async function loadHours(){if(!state.isMember){state.hourInventory=[];state.hourHistory=[];state.usedTotal=0;return null}const d=await rpc("hv_analysis_member_hours_v1");state.hourInventory=Array.isArray(d?.available)?d.available:[];state.hourHistory=Array.isArray(d?.used)?d.used:[];state.activeUntil=d?.active_until||state.activeUntil;state.lastHoursGeneration=Math.max(Number(state.lastHoursGeneration||0),Number(d?.hours_generation??d?.generation??0));state.usedTotal=Number(d?.total_activated_hours||0);return d}
