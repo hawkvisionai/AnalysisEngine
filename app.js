@@ -204,7 +204,7 @@
   }
 
   async function loadReverseD9StructureMap(){
-    // RC52：Reverse D9 不再自行第二次查資料庫。
+    // RC53：Reverse D9 不再自行第二次查資料庫。
     // 直接共用 Basic 已驗證可工作的同一批歷史 rows，同步建立含來源牌靴的 D9 索引。
     if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
       return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
@@ -774,6 +774,15 @@
     }
 
     const searchSequence = availableRounds.slice(-length);
+
+    // RC53：一旦使用者已正式啟動分析且有效局數已足夠，
+    // 「分析運作中」與「目前是否有可下注訊號」必須分開。
+    // 以前只有拿到可公開方向後才設 analysisStarted=true，
+    // 導致逆平第一個 D9 若為莊 / 平票 / 無候選，之後新增牌局完全不再自動重算。
+    // 現在先鎖定分析已啟動，後續每一個實際 B/P/T 都會重新跑最新 D9。
+    state.analysisStarted = true;
+    saveSession();
+
     setAnalyzing(true);
 
     try {
@@ -846,7 +855,6 @@
 
       // 先保存內部判定；核心停止期間仍在背景重播，但不對會員顯示方向，也不列入績效。
       state.pendingPrediction = outcome;
-      state.analysisStarted = true;
       const publicSignal = window.HawkVisionSessionPolicy?.isPredictionPublic?.() !== false;
       if (publicSignal) {
         showDecisionResult(outcome, `${historicalRate}%`, true);
@@ -1002,6 +1010,7 @@
     },
     getStrategyMethod(){ return state.strategyMethod; },
     getPendingPrediction(){ return state.pendingPrediction; },
+    isAnalysisRunning(){ return Boolean(state.analysisStarted); },
     getReverseD9HistoryMeta(){ return state._reverseD9HistoryMeta ? {...state._reverseD9HistoryMeta} : null; },
     getReverseD9InternalError(){ return state._reverseD9LastError||null; },
     recomputeCurrent(){ return state.analysisStarted ? analyze(true) : Promise.resolve(); },
