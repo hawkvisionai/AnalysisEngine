@@ -160,26 +160,21 @@
   }
 
   async function loadReverseD9StructureMap(){
-    const authClient=window.hvAnalysisAuthClient;
-    const {data:{session:currentAuthSession}}=authClient?await authClient.auth.getSession():{data:{session:null}};
-    const authKey=currentAuthSession?.user?.id||"";
-
-    if(state._reverseD9AuthKey!==authKey){
-      state._reverseD9AuthKey=authKey;
-      state._reverseD9StructMap=null;
-      state._reverseD9HistoryShoes=null;
-      state._reverseD9Loading=null;
-    }
+    // 逆平 D9 必須和基礎歷史索引讀取「同一份完整 games 歷史資料」。
+    // 不使用會員登入身分直接查 games，避免 Supabase RLS 依會員身分裁切歷史牌靴，
+    // 導致 D9 結構候選大量缺失而長時間顯示「等待有效訊號」。
     if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
       return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
     }
     if(state._reverseD9Loading)return state._reverseD9Loading;
 
     state._reverseD9Loading=(async()=>{
-      const hc=window.hvAnalysisAuthClient;
-      if(!hc)throw new Error("登入資料庫連線尚未完成");
-      const {data:{session:authSession}}=await hc.auth.getSession();
-      if(!authSession?.access_token)throw new Error("登入狀態已失效，無法讀取正式分析資料");
+      if(!window.supabase || !cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY)
+        throw new Error("歷史資料庫設定不存在");
+      const hc=window.supabase.createClient(
+        cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY,
+        {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
+      );
 
       const rows=[];
       for(let from=0;;from+=1000){
@@ -232,6 +227,7 @@
 
       state._reverseD9StructMap=map;
       state._reverseD9HistoryShoes=shoes;
+      state._reverseD9HistoryMeta={rowCount:rows.length,shoeCount:shoes.length,keyCount:map.size,loadedAt:Date.now()};
       return {map,shoes};
     })();
 
@@ -966,6 +962,7 @@
     state._reverseD9StructMap = null;
     state._reverseD9HistoryShoes = null;
     state._reverseD9Loading = null;
+    state._reverseD9HistoryMeta = null;
 
     state.rounds = [];
     state.analysisStarted = false;
@@ -1008,6 +1005,7 @@
     },
     getStrategyMethod(){ return state.strategyMethod; },
     getPendingPrediction(){ return state.pendingPrediction; },
+    getReverseD9HistoryMeta(){ return state._reverseD9HistoryMeta ? {...state._reverseD9HistoryMeta} : null; },
     recomputeCurrent(){ return state.analysisStarted ? analyze(true) : Promise.resolve(); },
     analyzeNow(){ return analyze(false); },
     resetEvaluationStatsPreserveShoe(){
