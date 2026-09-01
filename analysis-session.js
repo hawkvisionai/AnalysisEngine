@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.34";
+const VERSION="3.4.35";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -231,25 +231,13 @@ function hvRunSetupEnterGuard(){
  if(hvSetupEnterGuardBusy||now-hvSetupEnterGuardAt<500)return;
  hvSetupEnterGuardBusy=true;
  hvSetupEnterGuardAt=now;
- const oldText=btn.textContent;
- btn.textContent="正在進入…";
- btn.classList.add("hv-enter-pending");
  try{
    enterAnalysisFromSetupButton();
-   setTimeout(()=>{
-     hvSetupEnterGuardBusy=false;
-     const still=$("hvInlineEnter");
-     if(still&&hvCurrentView==="setup"){
-       still.textContent=oldText;
-       still.classList.remove("hv-enter-pending");
-     }
-   },650);
+   setTimeout(()=>{hvSetupEnterGuardBusy=false},250);
  }catch(err){
    hvSetupEnterGuardBusy=false;
    console.error("進入分析按鈕處理失敗",err);
    setErr("無法進入分析："+(err?.message||String(err)));
-   const still=$("hvInlineEnter");
-   if(still){still.textContent=oldText;still.classList.remove("hv-enter-pending")}
  }
 }
 function hvSetupEnterHit(e){
@@ -322,7 +310,7 @@ function renderSetup(){
  $("hvEntryBody").querySelectorAll("[data-style]").forEach(c=>c.onclick=e=>{if(e.target.closest("[data-method]"))return;const k=c.dataset.style;if(activeStyle===k){state.family=null;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false;document.activeElement?.blur?.()}else{state.family=k;state.method=null;state.points=0;state.initialPoints=0;state.unitPoints=0;state.manualEdited=false}renderSetup()});
  $("hvEntryBody").querySelectorAll("[data-method]").forEach(b=>b.onclick=e=>{e.stopPropagation();state.method=b.dataset.method;const z=info();state.points=methodRecommendedPoints(z);state.initialPoints=state.points;state.profit=0;state.unitPoints=z.reverse?0:100;state.manualEdited=false;renderSetup();const mobile=matchMedia("(max-width:700px)").matches;const input=$("hvPointsInput");if(input){input.focus();try{const n=input.value.length;input.setSelectionRange(n,n)}catch(_){ }if(mobile){requestAnimationFrame(()=>{const shell=$("hvEntryShell"),side=document.querySelector(".hv-goal-side");if(shell&&side){shell.scrollTo({top:Math.max(0,side.offsetTop-8),behavior:"smooth"})}})}}});
  $("hvPointsInput")?.addEventListener("input",e=>{const raw=String(e.target.value).replace(/\D/g,"").slice(0,10);e.target.value=raw;state.points=Math.min(CAP,Number(raw||0));state.manualEdited=true;renderDynamicSetupBits()});
- const inlineEnter=$("hvInlineEnter");if(inlineEnter){inlineEnter.disabled=false;}
+ const inlineEnter=$("hvInlineEnter");if(inlineEnter){inlineEnter.disabled=false;inlineEnter.onclick=e=>{e.preventDefault();enterAnalysisFromSetupButton();};}
 }
 function renderDynamicSetupBits(){const i=info(),warn=warningData();const box=document.querySelector(".hv-goal-warning");if(box){box.className=`hv-goal-warning ${warn?warn[0]:"empty"}`;box.innerHTML=warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}}
 function validateSetup(){if(!setupComplete())return false;const v=Math.min(CAP,Math.max(0,Number($("hvPointsInput")?.value||state.points||0)));if(!Number.isFinite(v))return false;state.points=v;state.skippedSetup=false;return true}
