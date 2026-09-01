@@ -35,7 +35,7 @@
   const BASIC_MIN_HISTORY = 10;
   const BASIC_INDEX_CACHE_KEY = "hv-basic-d-index-v1";
   const BASIC_INDEX_TTL_MS = 6*60*60*1000;
-  const D9_METHODS = new Set(["standard","advanced30","advanced60","steady","aggressive"]);
+  const D9_METHODS = new Set(["reverse7","reverse8","d9_1137","d9_113715","d9_11371531_wait","d9_1371531_wait","d9_1371531_nostop"]);
 
   function outcomeCode(winner) {
     return winner === "莊" ? "B" : winner === "閒" ? "P" : null;
@@ -118,6 +118,31 @@
     const total = Number(rec.莊||0) + Number(rec.閒||0);
     if (total < BASIC_MIN_HISTORY || Number(rec.莊||0) === Number(rec.閒||0)) return null;
     return { counts:{莊:Number(rec.莊||0),閒:Number(rec.閒||0)}, total, N };
+  }
+
+  async function searchSequenceCore(kind,N,rounds){
+    await loadBasicHistoryIndex();
+    if(rounds.length<N)return null;
+    const cfg2=window.HAWKVISION_CONFIG||{};
+    const hc=window.supabase.createClient(cfg2.SUPABASE_URL,cfg2.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+    if(!state._genericHistory){
+      const rows=[];for(let from=0;;from+=1000){const {data,error}=await hc.from("games").select("shoe_id,game_number,winner").range(from,from+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break}
+      const by=new Map();for(const g of rows){if(!by.has(g.shoe_id))by.set(g.shoe_id,[]);by.get(g.shoe_id).push(g)}
+      state._genericHistory=[...by.values()].map(a=>a.sort((x,y)=>Number(x.game_number)-Number(y.game_number)).map(x=>x.winner));
+    }
+    const target=rounds.slice(-N).map(x=>x==="莊"?"B":x==="閒"?"P":"T");let cand=[];
+    const mismatch=(a,b,weighted=false)=>a.reduce((d,x,i)=>d+(x===b[i]?0:(weighted?(i+1)/N:1)),0);
+    const sig=a=>{let sw=0,mx=1,cur=1;for(let i=1;i<a.length;i++){if(a[i]===a[i-1]){cur++;mx=Math.max(mx,cur)}else{sw++;cur=1}}return `${a[a.length-1]}|${cur}|${sw}|${mx}`};
+    for(const shoe of state._genericHistory){for(let j=N;j<shoe.length;j++){const next=shoe[j];if(!(next==="莊"||next==="閒"))continue;const seq=shoe.slice(j-N,j).map(x=>x==="莊"?"B":x==="閒"?"P":"T");let d=mismatch(target,seq,kind==="C");if(kind==="B"&&d>1)continue;if(kind==="D"){if(sig(target)===sig(seq))d=0;else d=mismatch(target,seq,true)*1.8}cand.push({next,d})}}
+    if(kind==="B"){cand.sort((a,b)=>a.d-b.d);cand=cand.slice(0,120)}else{cand.sort((a,b)=>a.d-b.d);cand=cand.slice(0,120)}
+    if(cand.length<10)return null;let B=0,P=0;for(const x of cand){const w=1/(1+x.d);if(x.next==="莊")B+=w;else P+=w}if(Math.abs(B-P)<1e-9)return null;return {counts:{莊:B,閒:P},total:cand.length,N};
+  }
+  async function searchStrategyCore(){
+    const m=state.strategyMethod||"";
+    if(m==="reverse7"||m==="reverse8")return searchSequenceCore("D",9,state.rounds); // D9含和：保留實際9局位置
+    if(m==="b3_11371531_nostop")return searchSequenceCore("B",3,state.rounds.filter(x=>x!=="和"));
+    if(m==="c10_1371531_recover")return searchSequenceCore("C",10,state.rounds.filter(x=>x!=="和"));
+    return searchRoadStructure(state.rounds.filter(x=>x!=="和"));
   }
 
   function showToast(message) {
@@ -563,17 +588,19 @@
     // 「最近 N 局」在分析時代表最近 N 個莊／閒結果。
     // 和局仍完整保留在珠盤路與牌靴統計中。
     const nonTieRounds = state.rounds.filter(result => result !== "和");
+    const reverseTieCore=["reverse7","reverse8"].includes(state.strategyMethod);
+    const availableRounds=reverseTieCore?state.rounds:nonTieRounds;
 
-    if (nonTieRounds.length < length) {
+    if (availableRounds.length < length) {
       if (!auto) showToast(`至少需要輸入 ${length} 個莊／閒結果`);
       return;
     }
 
-    const searchSequence = nonTieRounds.slice(-length);
+    const searchSequence = availableRounds.slice(-length);
     setAnalyzing(true);
 
     try {
-      const road = await searchRoadStructure(nonTieRounds);
+      const road = await searchStrategyCore();
       const counts = road?.counts || { "莊": 0, "閒": 0 };
       const total = road?.total || 0;
 
@@ -586,7 +613,8 @@
         return;
       }
 
-      const outcome = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      let outcome = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      if (["reverse7","reverse8"].includes(state.strategyMethod) && outcome!=="閒") { state.pendingPrediction=null; window.HawkVisionSessionPolicy?.clearPublicSignal?.(); showNoSignalState(); refreshSuggestedBet(); saveSession(); return; }
 
       // 歷史符合率：
       // 只表示「相同歷史序列中，下一個非和局結果為本次判定的比例」。
