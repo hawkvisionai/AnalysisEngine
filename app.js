@@ -960,6 +960,13 @@
   }
 
   function startNewShoe() {
+    // 每次開啟全新分析都重新建立一次逆平 D9 歷史快照。
+    // 同一副牌靴內則固定使用這份快照，避免不同裝置/舊頁面沿用不同時間點的快取，
+    // 造成 reverse7 / reverse8 在相同輸入序列下得到不同原始 D9 判定。
+    state._reverseD9StructMap = null;
+    state._reverseD9HistoryShoes = null;
+    state._reverseD9Loading = null;
+
     state.rounds = [];
     state.analysisStarted = false;
     state.pendingPrediction = null;
