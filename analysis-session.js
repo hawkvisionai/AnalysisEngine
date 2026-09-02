@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.52";
+const VERSION="3.4.53";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -292,13 +292,14 @@ function enterAnalysisFromSetupButton(){
    const previousMethod=carry?.method||window.HawkVisionAnalysisCore?.getStrategyMethod?.()||null;
    const strategyChanged=!!previousMethod&&previousMethod!==state.method;
 
-   if(state.manualEdited&&state.points>0)clearBankrollLockAfterManualFunding();
+   if(state.manualEdited)clearBankrollLockAfterManualFunding();
    state.manualEdited=false;
    state.pendingSettingsCommit=false;
    state.editingSettings=false;
 
    if(strategyChanged){
      // 固定規則：切換玩法 / 層級 / 打法 = 開啟全新分析。
+      state.bankrollLocked=false;
      // 只保留目前剩餘點數與本次輸贏；舊鞋所有分析資料全部清除。
      const keepPoints=state.points;
      const keepInitialPoints=state.initialPoints;
@@ -380,8 +381,8 @@ function renderSetup(){
 }
 function renderDynamicSetupBits(){const i=info(),warn=warningData();const box=document.querySelector(".hv-goal-warning");if(box){box.className=`hv-goal-warning ${warn?warn[0]:"empty"}`;box.innerHTML=warn?`<strong>${warn[1]}</strong><p>${warn[2]}</p>`:""}}
 function validateSetup(){if(!setupComplete())return false;const v=Math.min(CAP,Math.max(0,Number($("hvPointsInput")?.value||state.points||0)));if(!Number.isFinite(v))return false;state.points=v;state.skippedSetup=false;return true}
-function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){if(before){state.profit=Number(before.profit)||0;state.initialPoints=state.points;normalizePointState("points");if(state.points>0)clearBankrollLockAfterManualFunding()}else{state.initialPoints=state.points;state.profit=0;clearBankrollLockAfterManualFunding()}}else if(before){state.points=Math.max(0,Number(before.points)||0);state.initialPoints=Math.max(0,Number(before.initialPoints)||0);state.profit=Number(before.profit)||0;state.bankrollLocked=!!before.bankrollLocked;normalizePointState("points")}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){
- const keepPoints=state.points,keepInitialPoints=state.initialPoints,keepProfit=state.profit;
+function commitSettings(){const before=state.settingsSnapshot;const oldKey=before?`${before.mode||""}|${before.family||""}|${before.method||""}`:null;const changed=!!before&&oldKey!==strategyKey();if(state.manualEdited){if(before){state.profit=Number(before.profit)||0;state.initialPoints=state.points;normalizePointState("points");clearBankrollLockAfterManualFunding()}else{state.initialPoints=state.points;state.profit=0;clearBankrollLockAfterManualFunding()}}else if(before){state.points=Math.max(0,Number(before.points)||0);state.initialPoints=Math.max(0,Number(before.initialPoints)||0);state.profit=Number(before.profit)||0;state.bankrollLocked=false;normalizePointState("points")}if(info()?.reverse)state.unitPoints=0;else if(changed||state.manualEdited||!state.unitPoints)state.unitPoints=calculatedUnit();if(state.mode==="basic")state.noCommission=false;if(changed){
+ const keepPoints=state.points,keepInitialPoints=state.initialPoints,keepProfit=state.profit;state.bankrollLocked=false;
  window.HawkVisionAnalysisCore?.resetShoe?.();
  state.points=keepPoints;state.initialPoints=keepInitialPoints;state.profit=keepProfit;normalizePointState("points");
  state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;
@@ -572,7 +573,7 @@ window.HawkVisionSessionPolicy={
 };
 async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_token:state.deviceToken,p_client_name:"analysis"})}
 async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){if(d?.active_until)state.activeUntil=d.active_until;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;updateTimeUI();syncStartControls();const banner=$("hvLockBanner");if(banner&&state.setupComplete){banner.textContent="所有時數已被清除，請聯繫上層";banner.classList.add("show")}}}}catch(e){console.warn("analysis live status",e)}}
-function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=!!b.bankroll_locked;state.skippedSetup=!!b.skipped_setup}
+function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.skippedSetup=!!b.skipped_setup}
 function clearExpiredMemberRuntime(){
  state.setupComplete=false;state.mode=null;state.family=null;state.method=null;
  state.points=0;state.initialPoints=0;state.profit=0;state.unitPoints=0;
