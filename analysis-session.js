@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.53";
+const VERSION="3.4.54";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -16,7 +16,7 @@ const state={
  packQty:{},hourInventory:[],hourHistory:[],settingsSnapshot:null,pendingSettingsCommit:false,currentPublicBetAllowed:false,
  officialHistory:[],progressionIndex:0,skipSettlement:false,deviceToken:"",
  setupComplete:false,lastHoursGeneration:0,lastPasswordGeneration:0,passwordClaim:false,
- actualMode:"basic",modeNotice:"",unitPoints:0,reverseHundredUsed:false,bankrollLocked:false,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false
+ actualMode:"basic",modeNotice:"",unitPoints:0,reverseHundredUsed:false,bankrollLocked:false,bankrollResumeAnalysis:false,bankrollResumeBetting:false,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false
 };
 let tickTimer=null,pollTimer=null,saveTimer=null,lastRenderedSecond=null;
 let hvViewEpoch=0,hvCurrentView="boot";
@@ -66,6 +66,9 @@ function normalizePointState(source="points"){
 }
 function activateBankrollLock(){
  if(state.bankrollLocked)return;
+ // RC55：點數不足只暫停「當局下注」，不可遺失原本正在分析／下注的運作狀態。
+ state.bankrollResumeAnalysis=!!state.analysisActive;
+ state.bankrollResumeBetting=!!state.bettingActive;
  state.bankrollLocked=true;
  state.analysisActive=false;
  state.bettingActive=false;
@@ -77,7 +80,14 @@ function activateBankrollLock(){
  queueSave();
 }
 function clearBankrollLockAfterManualFunding(){
+ const resumeAnalysis=!!state.bankrollResumeAnalysis;
+ const resumeBetting=!!state.bankrollResumeBetting;
  state.bankrollLocked=false;
+ state.bankrollResumeAnalysis=false;
+ state.bankrollResumeBetting=false;
+ state.analysisActive=resumeAnalysis||resumeBetting;
+ state.bettingActive=resumeBetting;
+ return state.analysisActive||state.bettingActive;
 }
 function formatTime(sec){sec=Math.max(0,Math.floor(Number(sec)||0));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`}
 function calcRemaining(){if(!state.isMember||!state.activeUntil)return 0;return Math.max(0,Math.ceil((new Date(state.activeUntil).getTime()-Date.now())/1000))}
@@ -221,7 +231,7 @@ function restoreCarryPointsWhileChoosing(){
 }
 function snapshotSettings(){return {mode:state.mode,family:state.family,method:state.method,points:state.points,initialPoints:state.initialPoints,profit:state.profit,bankrollLocked:!!state.bankrollLocked,skippedSetup:state.skippedSetup,analysisActive:state.analysisActive,bettingActive:state.bettingActive,progressionIndex:state.progressionIndex,noCommission:state.noCommission,actualMode:state.actualMode,modeNotice:state.modeNotice,unitPoints:state.unitPoints,corePause:JSON.parse(JSON.stringify(state.corePause||freshCorePause())),reverseHundredUsed:!!state.reverseHundredUsed}}
 function restoreSettingsSnapshot(){const x=state.settingsSnapshot;if(!x)return;Object.assign(state,x);state.settingsSnapshot=null;state.pendingSettingsCommit=false;state.manualEdited=false}
-function enterAnalysisFromSetupButton(){
+async function enterAnalysisFromSetupButton(){
  try{
    // 固定流程：分析設定頁先判斷會員時數；有時數才能直接進分析，
    // 沒時數才轉時數包。管理者不受此限制。
@@ -291,6 +301,7 @@ function enterAnalysisFromSetupButton(){
 
    const previousMethod=carry?.method||window.HawkVisionAnalysisCore?.getStrategyMethod?.()||null;
    const strategyChanged=!!previousMethod&&previousMethod!==state.method;
+   const bankrollRefillResume=!!carry?.bankrollLocked&&state.manualEdited&&!strategyChanged;
 
    if(state.manualEdited)clearBankrollLockAfterManualFunding();
    state.manualEdited=false;
@@ -300,6 +311,8 @@ function enterAnalysisFromSetupButton(){
    if(strategyChanged){
      // 固定規則：切換玩法 / 層級 / 打法 = 開啟全新分析。
       state.bankrollLocked=false;
+      state.bankrollResumeAnalysis=false;
+      state.bankrollResumeBetting=false;
      // 只保留目前剩餘點數與本次輸贏；舊鞋所有分析資料全部清除。
      const keepPoints=state.points;
      const keepInitialPoints=state.initialPoints;
@@ -330,8 +343,18 @@ function enterAnalysisFromSetupButton(){
    window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
    window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
    updatePointCards();
-   queueSave();
    showAnalysis();
+
+   // 點數不足後在「分析設定」補入新點數，必須立刻解除舊鎖並重新判定目前這一局。
+   // 否則畫面雖保留「本次判定」，currentPublicBetAllowed 仍是 false，會錯顯示「本局不下注」。
+   if(bankrollRefillResume&&(state.analysisActive||state.bettingActive)){
+     state.currentPublicBetAllowed=false;
+     await window.HawkVisionAnalysisCore?.analyzeNow?.();
+     updatePointCards();
+   }
+
+   syncStartControls();
+   queueSave();
  }catch(err){
    console.error("分析設定進入分析失敗",err);
    setErr("無法進入分析："+(err?.message||String(err)));
@@ -543,7 +566,7 @@ function undoLastRoundExact(){
 function setupStartButtons(){setupRoadToggle();$("hvResetProfit")?.addEventListener("click",resetSessionProfit);$("hvStartAnalysis")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive||state.analysisActive)return;state.analysisActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();await window.HawkVisionAnalysisCore?.analyzeNow?.();queueSave()});$("hvStartBetting")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive)return;const hadAnalysis=state.analysisActive;state.analysisActive=true;state.bettingActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);state.progressionIndex=0;if(!hadAnalysis)resetCorePause();resetOfficialStats();if(!hadAnalysis)await window.HawkVisionAnalysisCore?.analyzeNow?.();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();syncStartControls();queueSave()});document.querySelectorAll("[data-result]").forEach(btn=>btn.addEventListener("click",()=>settleRound(btn.dataset.result),true));$("confirmNewShoe")?.addEventListener("click",()=>setTimeout(()=>{
  setRoadVisible(true);
  state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;
- state.reverseHundredUsed=false;state.bankrollLocked=false;state.officialHistory=[];state.currentPublicBetAllowed=false;
+ state.reverseHundredUsed=false;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.officialHistory=[];state.currentPublicBetAllowed=false;
  resetCorePause();resetSkip();
  updatePointCards();
  if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";
@@ -573,7 +596,7 @@ window.HawkVisionSessionPolicy={
 };
 async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_token:state.deviceToken,p_client_name:"analysis"})}
 async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){if(d?.active_until)state.activeUntil=d.active_until;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;updateTimeUI();syncStartControls();const banner=$("hvLockBanner");if(banner&&state.setupComplete){banner.textContent="所有時數已被清除，請聯繫上層";banner.classList.add("show")}}}}catch(e){console.warn("analysis live status",e)}}
-function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.skippedSetup=!!b.skipped_setup}
+function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.skippedSetup=!!b.skipped_setup}
 function clearExpiredMemberRuntime(){
  state.setupComplete=false;state.mode=null;state.family=null;state.method=null;
  state.points=0;state.initialPoints=0;state.profit=0;state.unitPoints=0;
