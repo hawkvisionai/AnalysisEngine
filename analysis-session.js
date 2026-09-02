@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.55";
+const VERSION="3.4.56";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -494,7 +494,7 @@ function settleRound(result){
  }
 
  const signal=!!predicted,allowedBefore=signal&&hasBettableDecision();
- state.lastRoundHadSignal=signal;state.lastRoundEvaluationAllowed=!!(state.analysisActive&&allowedBefore);
+ state.lastRoundHadSignal=signal;state.lastRoundEvaluationAllowed=!!(state.analysisActive&&allowedBefore&&!skip);
  if(!signal){state.currentPublicBetAllowed=false;updatePointCards();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave();return}
  const win=predicted===result;
  if(state.bettingActive&&allowedBefore&&!skip){
