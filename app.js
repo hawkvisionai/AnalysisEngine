@@ -204,7 +204,7 @@
   }
 
   async function loadReverseD9StructureMap(){
-    // RC55：Reverse D9 不再自行第二次查資料庫。
+    // RC56：Reverse D9 不再自行第二次查資料庫。
     // 直接共用 Basic 已驗證可工作的同一批歷史 rows，同步建立含來源牌靴的 D9 索引。
     if(state._reverseD9StructMap instanceof Map && Array.isArray(state._reverseD9HistoryShoes)){
       return {map:state._reverseD9StructMap,shoes:state._reverseD9HistoryShoes};
@@ -775,7 +775,7 @@
 
     const searchSequence = availableRounds.slice(-length);
 
-    // RC55：一旦使用者已正式啟動分析且有效局數已足夠，
+    // RC56：一旦使用者已正式啟動分析且有效局數已足夠，
     // 「分析運作中」與「目前是否有可下注訊號」必須分開。
     // 以前只有拿到可公開方向後才設 analysisStarted=true，
     // 導致逆平第一個 D9 若為莊 / 平票 / 無候選，之後新增牌局完全不再自動重算。
