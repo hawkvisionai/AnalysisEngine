@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.56";
+const VERSION="3.4.57";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -32,7 +32,7 @@ const methodInfo={
  d9_1137:{label:"穩健型・標準",style:"穩健型",level:"標準",units:60,minGames:9,core:"D9",seq:[1,1,3,7],lastLoss:0,pause:"none"},
  d9_113715:{label:"穩健型・進階",style:"穩健型",level:"進階",units:90,minGames:9,core:"D9",seq:[1,1,3,7,15],lastLoss:1,pause:"none"},
  reverse8:{label:"均衡型・入門",style:"均衡型",level:"入門",units:null,recommendedPoints:7000,minGames:9,core:"D9T",reverse:true,rate:.08,pause:"none"},
- d9_11371531_wait:{label:"均衡型・進階",style:"均衡型",level:"進階",units:100,minGames:9,core:"D9",seq:[1,1,3,7,15,31],lastLoss:0,pause:"wait1"},
+ d9_11371531_wait:{label:"均衡型・進階",style:"均衡型",level:"進階",units:190,minGames:9,core:"D9",seq:[1,1,3,7,15,31],lastLoss:0,pause:"none"},
  c10_1371531_recover:{label:"節奏型・標準",style:"節奏型",level:"標準",units:160,minGames:10,core:"C10",seq:[1,3,7,15,31],lastLoss:1,pause:"recover0"},
  d9_1371531_wait:{label:"節奏型・進階",style:"節奏型",level:"進階",units:170,minGames:9,core:"D9",seq:[1,3,7,15,31],lastLoss:0,pause:"wait1"},
  d9_1371531_nostop:{label:"進取型・標準",style:"進取型",level:"標準",units:190,minGames:9,core:"D9",seq:[1,3,7,15,31],lastLoss:1,pause:"none"},
