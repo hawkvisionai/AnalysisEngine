@@ -2100,3 +2100,19 @@ body.hv-analysis-visible .hv-road-toggle:disabled{opacity:.4!important}
   body.hv-analysis-visible .hv-reset-profit span{font-size:12px}
   body.hv-analysis-visible .hv-result-heading h2{padding-right:126px}
 }
+
+
+/* v3.4.58｜正式 D9 選房輔助＋離場風控警示 */
+.hv-formal-assist{display:none;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
+.hv-formal-assist.show{display:grid}
+.hv-assist-box{min-height:92px;box-sizing:border-box;border:1px solid rgba(255,255,255,.16);border-radius:13px;padding:12px 14px;background:rgba(28,23,38,.62)}
+.hv-assist-label{display:block;color:#c8bfd3;font-size:11px;font-weight:900;letter-spacing:.06em;margin-bottom:5px}
+.hv-assist-box strong{display:block;font-size:16px;line-height:1.35;color:#f4effa;margin-bottom:5px}
+.hv-assist-box small{display:block;color:#c8bfd3;font-size:12px;line-height:1.55}
+.hv-assist-box.good{border-color:rgba(72,190,120,.58);background:rgba(36,132,75,.14)}
+.hv-assist-box.good strong{color:#9be6b9}
+.hv-assist-box.watch{border-color:rgba(225,181,76,.52);background:rgba(141,101,26,.14)}
+.hv-assist-box.watch strong{color:#f1cf79}
+.hv-assist-box.danger{border-color:rgba(235,91,108,.62);background:rgba(157,47,62,.16)}
+.hv-assist-box.danger strong{color:#ff9ba8}
+@media(max-width:800px){.hv-formal-assist{grid-template-columns:1fr}.hv-assist-box{min-height:0}}

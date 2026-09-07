@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.57";
+const VERSION="3.4.58";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -16,7 +16,8 @@ const state={
  packQty:{},hourInventory:[],hourHistory:[],settingsSnapshot:null,pendingSettingsCommit:false,currentPublicBetAllowed:false,
  officialHistory:[],progressionIndex:0,skipSettlement:false,deviceToken:"",
  setupComplete:false,lastHoursGeneration:0,lastPasswordGeneration:0,passwordClaim:false,
- actualMode:"basic",modeNotice:"",unitPoints:0,reverseHundredUsed:false,bankrollLocked:false,bankrollResumeAnalysis:false,bankrollResumeBetting:false,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false
+ actualMode:"basic",modeNotice:"",unitPoints:0,reverseHundredUsed:false,bankrollLocked:false,bankrollResumeAnalysis:false,bankrollResumeBetting:false,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false,
+ exitRiskMethod:"",exitRiskLossRun:0,exitRiskWarned:false,exitRiskTriggerGame:null
 };
 let tickTimer=null,pollTimer=null,saveTimer=null,lastRenderedSecond=null;
 let hvViewEpoch=0,hvCurrentView="boot";
@@ -44,6 +45,64 @@ const STYLE_INFO={
  tempo:{name:"節奏型",icon:"⌛",brief:"依分析訊號調整出手節奏，在條件適合時進場。",methods:["c10_1371531_recover","d9_1371531_wait"]},
  active:{name:"進取型",icon:"🔥",brief:"提高點數運用與收益潛力，同時承受較高的波動。",methods:["d9_1371531_nostop","b3_11371531_nostop"]}
 };
+
+// v3.4.58｜正式選房輔助＋離房風控警示。
+// 僅套用已完成 OOS / 最終逐鞋稽核的三個正式 D9 打法；不改變 D9 方向、配注、結算或原停止邏輯。
+const FORMAL_ASSIST={
+ d9_113715:{kind:"stable",label:"🛡️ 穩健型・進階",roomStart:15,roomEnd:20,baseExit:45,warnGame:null,warnLoss:null},
+ d9_11371531_wait:{kind:"balanced",label:"⚖️ 均衡型・進階",roomStart:15,roomEnd:35,baseExit:35,warnGame:28,warnLoss:4},
+ d9_1371531_nostop:{kind:"aggressive",label:"🔥 進取型・標準",roomStart:10,roomEnd:20,baseExit:45,warnGame:27,warnLoss:3}
+};
+function formalAssistInfo(){return FORMAL_ASSIST[state.method]||null}
+function currentShoeRounds(){
+ const s=window.HawkVisionAnalysisCore?.exportState?.();
+ return Array.isArray(s?.rounds)?s.rounds.filter(x=>["莊","閒","和"].includes(x)):[]
+}
+function bpOnly(a){return a.filter(x=>x==="莊"||x==="閒")}
+function lastN(a,n){return a.slice(Math.max(0,a.length-n))}
+function countBP(a){return {b:a.filter(x=>x==="莊").length,p:a.filter(x=>x==="閒").length}}
+function hasMidDragon(a){let run=1;for(let i=1;i<=a.length;i++){if(i<a.length&&a[i]===a[i-1])run++;else{if(run>=3&&run<=4)return true;run=1}}return false}
+function hasLongDragon(a){let run=1;for(let i=1;i<a.length;i++){if(a[i]===a[i-1]){run++;if(run>=5)return true}else run=1}return false}
+function strictDoubleJump(a){const x=lastN(a,8).map(v=>v==="莊"?"B":"P").join("");return x==="BBPPBBPP"||x==="PPBBPPBB"}
+function roomAssistDecision(){
+ const cfg=formalAssistInfo();if(!cfg)return null;
+ const rounds=currentShoeRounds(),nextGame=rounds.length+1,bp=bpOnly(rounds),ten=lastN(bp,10),c=countBP(ten);
+ const base={cfg,nextGame,completed:rounds.length,effective:bp.length,ten,c,ok:false,tone:"neutral",title:"持續觀察",detail:""};
+ if(nextGame<cfg.roomStart){base.title="尚未進入建議看房區間";base.detail=`目前已完成第 ${rounds.length} 局；從第 ${cfg.roomStart} 局起開始判斷。`;return base}
+ if(nextGame>cfg.roomEnd){base.title="已超過建議進房區間";base.detail=`目前下一局為第 ${nextGame} 局；此打法建議在第 ${cfg.roomStart}～${cfg.roomEnd} 局完成進房判斷。`;return base}
+ if(ten.length<10){base.title="有效莊閒不足 10 局";base.detail=`目前有效莊／閒 ${ten.length}/10；和局不計入。`;return base}
+ if(cfg.kind==="stable") {
+   const mid=hasMidDragon(bp);base.ok=c.b===5&&c.p===5;base.tone=base.ok?"good":"watch";base.title=base.ok?"符合選房優先條件":"持續觀察";base.detail=`下一局第 ${nextGame} 局｜最近10有效局：莊 ${c.b}／閒 ${c.p}${mid?"｜已有3～4同邊中龍加分":""}`;return base
+ }
+ if(cfg.kind==="balanced") {
+   const long=hasLongDragon(bp),oneSide=Math.max(c.b,c.p)>=7;base.ok=c.b===4&&c.p===6&&!long&&!oneSide;base.tone=base.ok?"good":((long||oneSide)?"danger":"watch");base.title=base.ok?"符合選房優先條件":((long||oneSide)?"目前建議避開":"持續觀察");base.detail=`下一局第 ${nextGame} 局｜最近10有效局：莊 ${c.b}／閒 ${c.p}${hasMidDragon(bp)?"｜中龍加分":""}${long?"｜已出現5+長龍":""}${oneSide?"｜目前明顯單邊":""}`;return base
+ }
+ const dj=strictDoubleJump(bp),even=c.b===5&&c.p===5,avoid=c.p>=7&&!dj;base.ok=(even||dj)&&!avoid;base.tone=base.ok?"good":(avoid?"danger":"watch");base.title=base.ok?"符合選房優先條件":(avoid?"目前建議避開":"持續觀察");base.detail=`下一局第 ${nextGame} 局｜最近10有效局：莊 ${c.b}／閒 ${c.p}${dj?"｜最近8有效局嚴格雙跳":""}${avoid?"｜閒≥7且非嚴格雙跳":""}`;return base
+}
+function ensureExitRiskMethod(){
+ const key=formalAssistInfo()?state.method:"";
+ if(state.exitRiskMethod!==key){state.exitRiskMethod=key;state.exitRiskLossRun=0;state.exitRiskWarned=false;state.exitRiskTriggerGame=null}
+}
+function resetFormalExitRisk(){state.exitRiskMethod=formalAssistInfo()?state.method:"";state.exitRiskLossRun=0;state.exitRiskWarned=false;state.exitRiskTriggerGame=null}
+function updateFormalExitRiskAfterActualBet(win,roundNumber){
+ const cfg=formalAssistInfo();if(!cfg)return;ensureExitRiskMethod();
+ if(state.exitRiskWarned)return;
+ state.exitRiskLossRun=win?0:Math.max(0,Number(state.exitRiskLossRun||0))+1;
+ if(!win&&cfg.warnGame&&cfg.warnLoss&&roundNumber>=cfg.warnGame&&state.exitRiskLossRun>=cfg.warnLoss){state.exitRiskWarned=true;state.exitRiskTriggerGame=roundNumber}
+}
+function renderFormalAssist(){
+ const root=$("hvFormalAssist");if(!root)return;const cfg=formalAssistInfo();
+ root.classList.toggle("show",!!cfg);if(!cfg)return;ensureExitRiskMethod();
+ const room=roomAssistDecision(),roomBox=$("hvRoomAssistBox"),roomTitle=$("hvRoomAssistTitle"),roomDetail=$("hvRoomAssistDetail");
+ if(roomBox){roomBox.className=`hv-assist-box ${room?.tone||"neutral"}`}if(roomTitle)roomTitle.textContent=room?.title||"—";if(roomDetail)roomDetail.textContent=room?.detail||"";
+ const exitBox=$("hvExitAssistBox"),exitTitle=$("hvExitAssistTitle"),exitDetail=$("hvExitAssistDetail"),completed=currentShoeRounds().length;
+ let tone="neutral",title="尚未達離場條件",detail="";
+ if(state.exitRiskWarned&&cfg.warnGame){tone="danger";title="⚠ 建議離房";detail=`第 ${state.exitRiskTriggerGame} 局已觸發：第 ${cfg.warnGame} 局（含）後 D9 實際下注連錯 ${cfg.warnLoss} 注。此為低回撤風控警訊，不代表下一局一定會輸。`}
+ else if(completed>=cfg.baseExit){tone="danger";title="⚠ 已到正式離場區間";detail=cfg.kind==="balanced"?"已到第35局附近：停止隨意開新完整循環；僅第5～6關深階段依原規則完成當輪，其餘建議離房。":"已到第45局：停止開新完整循環；若目前第3關以上依原規則完成當輪，第1～2關建議離房。"}
+ else if(cfg.warnGame){tone=state.exitRiskLossRun>0?"watch":"neutral";title=state.exitRiskLossRun>0?`風控觀察：D9 目前連錯 ${state.exitRiskLossRun}/${cfg.warnLoss}`:"尚未達離場警訊";detail=`第 ${cfg.warnGame} 局（含）後，若 D9 實際下注連錯 ${cfg.warnLoss} 注，將提示建議離房。沒有D9訊號不清零；和局不結算；實際下注贏才歸零。`}
+ else {detail="此打法沒有通過驗證的額外連錯早退警訊；維持第45局正式離場規則。"}
+ if(exitBox)exitBox.className=`hv-assist-box ${tone}`;if(exitTitle)exitTitle.textContent=title;if(exitDetail)exitDetail.textContent=detail;
+}
 function methodRecommendedPoints(i=info()){return i?(i.reverse?i.recommendedPoints:i.units*100):0}
 function methodStyleKey(method=state.method){return Object.keys(STYLE_INFO).find(k=>STYLE_INFO[k].methods.includes(method))||null}
 function cookieGet(name){const p=name+"=";const r=document.cookie.split("; ").find(v=>v.startsWith(p));return r?decodeURIComponent(r.slice(p.length)):""}
@@ -175,7 +234,7 @@ function setRoadVisible(open){
 }
 function toggleRoad(){setRoadVisible(!document.body.classList.contains("hv-road-open"))}
 function setupRoadToggle(){[$("hvRoadToggleDesktop"),$("hvRoadToggleMobile")].filter(Boolean).forEach(b=>b.addEventListener("click",toggleRoad))}
-function showAnalysis(){beginView("analysis");hideShell();document.body.classList.add("hv-analysis-visible");document.body.classList.toggle("hv-basic-mode",state.mode==="basic");state.entered=true;normalizePointState("points");renderModeStatus();updatePointCards();$("hvResultMoney")?.classList.toggle("show",!state.skippedSetup);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();if(isMemberRole())$("hvMemberTimeBlock")?.classList.add("show");else $("hvMemberTimeBlock")?.classList.remove("show");if(state.mode==="basic")state.noCommission=false;setCommission(state.noCommission);document.querySelector(".hv-commission-inline")?.classList.toggle("hv-hidden-basic",state.mode==="basic");syncStartControls();setRoadVisible(!(state.analysisActive||state.bettingActive));updateTimeUI()}
+function showAnalysis(){beginView("analysis");hideShell();document.body.classList.add("hv-analysis-visible");document.body.classList.toggle("hv-basic-mode",state.mode==="basic");state.entered=true;normalizePointState("points");renderModeStatus();updatePointCards();$("hvResultMoney")?.classList.toggle("show",!state.skippedSetup);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();if(isMemberRole())$("hvMemberTimeBlock")?.classList.add("show");else $("hvMemberTimeBlock")?.classList.remove("show");if(state.mode==="basic")state.noCommission=false;setCommission(state.noCommission);document.querySelector(".hv-commission-inline")?.classList.toggle("hv-hidden-basic",state.mode==="basic");syncStartControls();setRoadVisible(!(state.analysisActive||state.bettingActive));updateTimeUI();renderFormalAssist();}
 function hideAnalysis(){document.body.classList.remove("hv-analysis-visible");document.body.classList.remove("hv-basic-mode")}
 function setErr(m=""){if($("hvEntryError"))$("hvEntryError").textContent=m}
 function brandTitle(extra=""){return `<span class="hv-brand-lockup"><img src="hawkvision-logo.png" alt="HawkVision"><span class="hv-brand-copy"><b><i>Hawk</i><em>Vision</em></b><small>SEE EVERY MOVE. STAY AHEAD.</small></span></span>${extra}`}
@@ -328,6 +387,7 @@ async function enterAnalysisFromSetupButton(){
      state.analysisActive=false;
      state.bettingActive=false;
      state.progressionIndex=0;
+     resetFormalExitRisk();
      state.currentPublicBetAllowed=false;
      state.reverseHundredUsed=false;
      state.officialHistory=[];
@@ -408,7 +468,7 @@ function commitSettings(){const before=state.settingsSnapshot;const oldKey=befor
  const keepPoints=state.points,keepInitialPoints=state.initialPoints,keepProfit=state.profit;state.bankrollLocked=false;
  window.HawkVisionAnalysisCore?.resetShoe?.();
  state.points=keepPoints;state.initialPoints=keepInitialPoints;state.profit=keepProfit;normalizePointState("points");
- state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;
+ state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();
  state.officialHistory=[];state.skipSettlement=false;state.currentPublicBetAllowed=false;
  state.reverseHundredUsed=false;state.lastRoundEvaluationAllowed=false;state.lastRoundHadSignal=false;
  resetCorePause();resetOfficialStats();resetSkip();setRoadVisible(true);updatePointCards()
@@ -420,7 +480,7 @@ function openHourConfirm(hours,qty,max){qty=Math.max(1,Math.min(max,Number(qty)|
 async function renderHours(){const viewEpoch=beginView("hours");showShell();setErr("");if(isMemberRole())await loadHours().catch(e=>{if(isCurrentView(viewEpoch,"hours"))setErr(e.message||String(e))});if(!isCurrentView(viewEpoch,"hours"))return;$("hvEntryTitle").innerHTML=brandTitle(`<span class="hv-hours-top-right"><span class="hv-used-total">${isMemberRole()?`已使用總時數 <b>${state.usedTotal}</b> 小時`:""}</span><button id="hvHoursEnter" class="hv-top-close" type="button">進入分析</button></span>`);$("hvEntryHint").textContent="";["hvEntryBack","hvEntrySkip","hvEntryNext"].forEach(id=>$(id).style.display="none");const packs=state.hourInventory.filter(p=>Number(p.available_count)>0);const packHtml=isManagementRole()?`<div class="hv-hours-unlimited">不受時數限制</div>`:(packs.length?packs.map(p=>{const h=Number(p.hours_per_package),count=Number(p.available_count),qty=Math.max(1,Math.min(count,state.packQty[h]||1));state.packQty[h]=qty;return `<div class="hv-hour-row-wrap"><div class="hv-hour-card"><div><strong>${h} 小時</strong><small>可使用 ${count} 包</small></div><div class="hv-pack-actions"><div class="hv-inline-stepper" aria-label="開啟數量"><button type="button" data-pack-minus="${h}" ${qty<=1?"disabled":""}>−</button><strong>${qty}</strong><button type="button" data-pack-plus="${h}" ${qty>=count?"disabled":""}>+</button></div><button class="hv-hour-open" data-hour="${h}" data-max="${count}" type="button">開啟</button></div></div></div>`}).join(""):`<div class="hv-hours-none">沒有可用時數，請聯繫上層</div>`);$("hvEntryBody").innerHTML=`<div class="hv-time-panel"><div class="hv-time-caption">目前剩餘時間</div><div id="hvHoursLiveTime" class="hv-time-big">${isManagementRole()?"不受限制":formatTime(calcRemaining())}</div></div><section class="hv-hours-available"><h3>可使用時數包</h3><div class="hv-hour-list">${packHtml}</div></section>`;const enterHoursAnalysis=()=>{if(state.pendingSettingsCommit)commitSettings();if(hasChosenNewStrategy())showAnalysis();else enterDefaultStandard()};const hoursEnter=$("hvHoursEnter");if(hoursEnter)hoursEnter.onclick=enterHoursAnalysis;if(isMemberRole()){$("hvEntryBody").querySelectorAll("[data-pack-minus]").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.packMinus);state.packQty[h]=Math.max(1,(state.packQty[h]||1)-1);renderHours()});$("hvEntryBody").querySelectorAll("[data-pack-plus]").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.packPlus),p=state.hourInventory.find(x=>Number(x.hours_per_package)===h);state.packQty[h]=Math.min(Number(p?.available_count||1),(state.packQty[h]||1)+1);renderHours()});$("hvEntryBody").querySelectorAll(".hv-hour-open").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.hour),max=Number(b.dataset.max);openHourConfirm(h,state.packQty[h]||1,max)})}}
 function updateTimeUI(){if(!state.isMember){$("hvMemberTimeBlock")?.classList.remove("show");if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="none";applyTimeLock();return}const sec=calcRemaining();state.remaining=sec;if(sec!==lastRenderedSecond){lastRenderedSecond=sec;const t=formatTime(sec);if($("hvHoursLiveTime"))$("hvHoursLiveTime").textContent=t;$("hvMemberTimeBlock")?.classList.add("show");if($("hvRemainingTimeTop"))$("hvRemainingTimeTop").textContent=t;if($("hvMenuRemainingTime")){$("hvMenuRemainingTime").style.display="block";$("hvMenuRemainingTime").textContent=`剩餘時間 ${t}`}}applyTimeLock()}
 function applyTimeLock(){const locked=state.isMember&&hvCurrentView==="analysis"&&calcRemaining()<=0;document.body.classList.toggle("hv-time-locked",locked);const banner=$("hvLockBanner");if(banner){banner.textContent="剩餘時數不足，請聯繫上層";banner.classList.toggle("show",locked)}document.querySelectorAll('#hvFunctionPopover [data-hv-fn]').forEach(b=>{const fn=b.dataset.hvFn;b.disabled=locked&&!['hours','logout'].includes(fn)})}
-function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.mode,actual_mode:state.actualMode,mode_notice:state.modeNotice,bankroll_base:state.initialPoints,current_bankroll:state.points,profit:state.profit,betting:{family:state.family,method:state.method,no_commission:state.noCommission,analysis_active:state.analysisActive,betting_active:state.bettingActive,progression_index:state.progressionIndex,unit_points:state.unitPoints,core_pause:state.corePause,official_history:state.officialHistory,reverse_hundred_used:state.reverseHundredUsed,bankroll_locked:state.bankrollLocked,skipped_setup:state.skippedSetup},screen:"analysis"}}
+function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.mode,actual_mode:state.actualMode,mode_notice:state.modeNotice,bankroll_base:state.initialPoints,current_bankroll:state.points,profit:state.profit,betting:{family:state.family,method:state.method,no_commission:state.noCommission,analysis_active:state.analysisActive,betting_active:state.bettingActive,progression_index:state.progressionIndex,unit_points:state.unitPoints,core_pause:state.corePause,official_history:state.officialHistory,reverse_hundred_used:state.reverseHundredUsed,bankroll_locked:state.bankrollLocked,skipped_setup:state.skippedSetup,exit_risk_method:state.exitRiskMethod,exit_risk_loss_run:state.exitRiskLossRun,exit_risk_warned:state.exitRiskWarned,exit_risk_trigger_game:state.exitRiskTriggerGame},screen:"analysis"}}
 function queueSave(analysisState){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveRuntime(analysisState).catch(()=>{}),250)}
 window.hvAnalysisRuntimeSave=analysisState=>queueSave(analysisState);
 async function saveRuntime(analysisState){if(!state.user)return;await rpc("hv_analysis_save_runtime_v1",{p_device_token:state.deviceToken,p_settings:serializeSettings(),p_analysis_state:analysisState||window.HawkVisionAnalysisCore?.exportState?.()||{}})}
@@ -467,6 +527,7 @@ function captureRoundSnapshot(roundNumber){
   lastRoundEvaluationAllowed:!!state.lastRoundEvaluationAllowed,
   lastRoundHadSignal:!!state.lastRoundHadSignal,
   currentPublicBetAllowed:!!state.currentPublicBetAllowed,
+  exitRiskMethod:state.exitRiskMethod||"",exitRiskLossRun:Math.max(0,Number(state.exitRiskLossRun||0)),exitRiskWarned:!!state.exitRiskWarned,exitRiskTriggerGame:state.exitRiskTriggerGame,
   roadOpen:document.body.classList.contains("hv-road-open"),
   coreSnapshot
  }
@@ -504,6 +565,7 @@ function settleRound(result){
      state.points=Math.max(0,state.points+delta);
      state.profit=state.profit+delta;
      normalizePointState("points");
+     updateFormalExitRiskAfterActualBet(win,roundNumber);
      const t=progressionType(),mi=info();
      if(mi?.reverse){if(wager===100)state.reverseHundredUsed=true;if(mi.pause!=="loss4wait1")state.progressionIndex=0}
      else if(t==="loss"&&mi?.seq){state.progressionIndex=win?0:(state.progressionIndex>=mi.seq.length-1?Math.max(0,Number(mi.lastLoss||0)):state.progressionIndex+1)}
@@ -511,7 +573,7 @@ function settleRound(result){
    }
  }
  if(state.analysisActive)advanceCorePause(win,roundNumber);
- state.currentPublicBetAllowed=false;updatePointCards();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave()
+ state.currentPublicBetAllowed=false;updatePointCards();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();renderFormalAssist();queueSave()
 }
 function restoreExactRoundSnapshot(snapshot){
  if(!snapshot||snapshot.schema!==2||!snapshot.coreSnapshot)return false;
@@ -536,6 +598,7 @@ function restoreExactRoundSnapshot(snapshot){
  state.lastRoundEvaluationAllowed=!!snapshot.lastRoundEvaluationAllowed;
  state.lastRoundHadSignal=!!snapshot.lastRoundHadSignal;
  state.currentPublicBetAllowed=!!snapshot.currentPublicBetAllowed;
+ state.exitRiskMethod=snapshot.exitRiskMethod||"";state.exitRiskLossRun=Math.max(0,Number(snapshot.exitRiskLossRun||0));state.exitRiskWarned=!!snapshot.exitRiskWarned;state.exitRiskTriggerGame=snapshot.exitRiskTriggerGame==null?null:Number(snapshot.exitRiskTriggerGame);
  window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
  window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
  const restored=window.HawkVisionAnalysisCore?.restoreExactSnapshot?.(snapshot.coreSnapshot)===true;
@@ -544,7 +607,7 @@ function restoreExactRoundSnapshot(snapshot){
  setRoadVisible(!!snapshot.roadOpen);
  updatePointCards();
  if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();
- syncStartControls();queueSave(snapshot.coreSnapshot);
+ syncStartControls();renderFormalAssist();queueSave(snapshot.coreSnapshot);
  return true
 }
 function undoLastRoundExact(){
@@ -563,15 +626,15 @@ function undoLastRoundExact(){
  if(restored)setRoadVisible(true);
  return restored;
 }
-function setupStartButtons(){setupRoadToggle();$("hvResetProfit")?.addEventListener("click",resetSessionProfit);$("hvStartAnalysis")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive||state.analysisActive)return;state.analysisActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();await window.HawkVisionAnalysisCore?.analyzeNow?.();queueSave()});$("hvStartBetting")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive)return;const hadAnalysis=state.analysisActive;state.analysisActive=true;state.bettingActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);state.progressionIndex=0;if(!hadAnalysis)resetCorePause();resetOfficialStats();if(!hadAnalysis)await window.HawkVisionAnalysisCore?.analyzeNow?.();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();syncStartControls();queueSave()});document.querySelectorAll("[data-result]").forEach(btn=>btn.addEventListener("click",()=>settleRound(btn.dataset.result),true));$("confirmNewShoe")?.addEventListener("click",()=>setTimeout(()=>{
+function setupStartButtons(){setupRoadToggle();$("hvResetProfit")?.addEventListener("click",resetSessionProfit);$("hvStartAnalysis")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive||state.analysisActive)return;state.analysisActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();await window.HawkVisionAnalysisCore?.analyzeNow?.();queueSave()});$("hvStartBetting")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive)return;const hadAnalysis=state.analysisActive;state.analysisActive=true;state.bettingActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);state.progressionIndex=0;resetFormalExitRisk();if(!hadAnalysis)resetCorePause();resetOfficialStats();if(!hadAnalysis)await window.HawkVisionAnalysisCore?.analyzeNow?.();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();syncStartControls();queueSave()});document.querySelectorAll("[data-result]").forEach(btn=>btn.addEventListener("click",()=>settleRound(btn.dataset.result),true));$("confirmNewShoe")?.addEventListener("click",()=>setTimeout(()=>{
  setRoadVisible(true);
- state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;
+ state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();
  state.reverseHundredUsed=false;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.officialHistory=[];state.currentPublicBetAllowed=false;
  resetCorePause();resetSkip();
  updatePointCards();
  if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";
  syncStartControls();queueSave()
-},0));$("hvSkipSettlement")?.addEventListener("change",e=>{state.skipSettlement=!!e.target.checked});[$("roundCount"),$("bankerTotal"),$("playerTotal")].filter(Boolean).forEach(el=>new MutationObserver(syncStartControls).observe(el,{childList:true,subtree:true,characterData:true}));syncStartControls()}
+},0));$("hvSkipSettlement")?.addEventListener("change",e=>{state.skipSettlement=!!e.target.checked});[$("roundCount"),$("bankerTotal"),$("playerTotal")].filter(Boolean).forEach(el=>new MutationObserver(()=>{syncStartControls();renderFormalAssist()}).observe(el,{childList:true,subtree:true,characterData:true}));syncStartControls()}
 function renderPasswordClaim(){beginView("password");state.passwordClaim=true;showShell();hideAnalysis();setErr("");$("hvEntryTitle").textContent="首次登入｜設定新密碼";$("hvEntryHint").textContent="第一次登入必須先設定自己的新密碼；設定成功後系統會登出，請使用新密碼重新登入。";$("hvEntryBody").innerHTML='<div class="hv-field"><label>新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword" type="password" autocomplete="new-password" placeholder="至少 8 個字元"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword">顯示</button></div></div><div class="hv-field"><label>再次輸入新密碼</label><div class="hv-password-wrap"><input id="hvNewPassword2" type="password" autocomplete="new-password" placeholder="再次輸入新密碼"><button class="hv-password-toggle" type="button" data-password-target="hvNewPassword2">顯示</button></div></div><button id="hvClaimLogout" class="hv-claim-logout" type="button">登出並返回登入</button>';$("hvClaimLogout")?.addEventListener("click",()=>window.hvGlobalLogout?.());$("hvEntryBody").querySelectorAll("[data-password-target]").forEach(btn=>btn.addEventListener("click",()=>{const input=$(btn.dataset.passwordTarget);if(!input)return;const showing=input.type==="text";input.type=showing?"password":"text";btn.textContent=showing?"顯示":"隱藏"}));$("hvEntryBack").style.display="none";$("hvEntrySkip").style.display="none";$("hvEntryNext").style.display="inline-block";$("hvEntryNext").textContent="設定新密碼並重新登入";$("hvEntryNext").onclick=submitPasswordClaim}
 async function submitPasswordClaim(){const p1=$("hvNewPassword")?.value||"",p2=$("hvNewPassword2")?.value||"";if(p1.length<8){setErr("新密碼至少需要 8 個字元");return}if(p1!==p2){setErr("兩次輸入的新密碼不一致");return}const {data:{session}}=await client.auth.getSession();if(!session?.access_token){setErr("登入狀態已失效，請重新登入");return}$("hvEntryNext").disabled=true;try{const res=await fetch(ADMIN_API+"/claim-password",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},body:JSON.stringify({new_password:p1})});const d=await res.json().catch(()=>({}));if(!res.ok||!d.ok)throw new Error(d.error||"密碼設定失敗");const {data:verify}=await client.from("profiles").select("must_change_password").eq("id",session.user.id).maybeSingle();if(verify?.must_change_password===true)throw new Error("密碼已送出但首次登入狀態尚未解除，請稍後再試");sessionStorage.setItem("hv-force-login-message","密碼設定成功，請使用新密碼重新登入");await window.hvGlobalLogout?.()}catch(e){setErr(e.message||String(e));$("hvEntryNext").disabled=false}}
 
@@ -596,7 +659,7 @@ window.HawkVisionSessionPolicy={
 };
 async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_token:state.deviceToken,p_client_name:"analysis"})}
 async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){if(d?.active_until)state.activeUntil=d.active_until;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;updateTimeUI();syncStartControls();const banner=$("hvLockBanner");if(banner&&state.setupComplete){banner.textContent="所有時數已被清除，請聯繫上層";banner.classList.add("show")}}}}catch(e){console.warn("analysis live status",e)}}
-function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.skippedSetup=!!b.skipped_setup}
+function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.skippedSetup=!!b.skipped_setup;state.exitRiskMethod=b.exit_risk_method||"";state.exitRiskLossRun=Math.max(0,Number(b.exit_risk_loss_run||0));state.exitRiskWarned=!!b.exit_risk_warned;state.exitRiskTriggerGame=b.exit_risk_trigger_game==null?null:Number(b.exit_risk_trigger_game)}
 function clearExpiredMemberRuntime(){
  state.setupComplete=false;state.mode=null;state.family=null;state.method=null;
  state.points=0;state.initialPoints=0;state.profit=0;state.unitPoints=0;
