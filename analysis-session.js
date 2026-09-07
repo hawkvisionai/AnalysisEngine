@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.58";
+const VERSION="3.4.60";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -46,7 +46,7 @@ const STYLE_INFO={
  active:{name:"進取型",icon:"🔥",brief:"提高點數運用與收益潛力，同時承受較高的波動。",methods:["d9_1371531_nostop","b3_11371531_nostop"]}
 };
 
-// v3.4.58｜正式選房輔助＋離房風控警示。
+// v3.4.60｜離場警示解除規則：警示後若實際下注判斷正確，解除警示並重新累計。
 // 僅套用已完成 OOS / 最終逐鞋稽核的三個正式 D9 打法；不改變 D9 方向、配注、結算或原停止邏輯。
 const FORMAL_ASSIST={
  d9_113715:{kind:"stable",label:"🛡️ 穩健型・進階",roomStart:15,roomEnd:20,baseExit:45,warnGame:null,warnLoss:null},
@@ -86,7 +86,12 @@ function ensureExitRiskMethod(){
 function resetFormalExitRisk(){state.exitRiskMethod=formalAssistInfo()?state.method:"";state.exitRiskLossRun=0;state.exitRiskWarned=false;state.exitRiskTriggerGame=null}
 function updateFormalExitRiskAfterActualBet(win,roundNumber){
  const cfg=formalAssistInfo();if(!cfg)return;ensureExitRiskMethod();
- if(state.exitRiskWarned)return;
+ // 已顯示離房警示後，若玩家仍繼續且下一次「實際下注」判斷正確：
+ // 立即解除警示、連錯歸零，從下一次實際下注重新累計。
+ if(state.exitRiskWarned){
+  if(win){state.exitRiskLossRun=0;state.exitRiskWarned=false;state.exitRiskTriggerGame=null}
+  return;
+ }
  state.exitRiskLossRun=win?0:Math.max(0,Number(state.exitRiskLossRun||0))+1;
  if(!win&&cfg.warnGame&&cfg.warnLoss&&roundNumber>=cfg.warnGame&&state.exitRiskLossRun>=cfg.warnLoss){state.exitRiskWarned=true;state.exitRiskTriggerGame=roundNumber}
 }
@@ -97,9 +102,9 @@ function renderFormalAssist(){
  if(roomBox){roomBox.className=`hv-assist-box ${room?.tone||"neutral"}`}if(roomTitle)roomTitle.textContent=room?.title||"—";if(roomDetail)roomDetail.textContent=room?.detail||"";
  const exitBox=$("hvExitAssistBox"),exitTitle=$("hvExitAssistTitle"),exitDetail=$("hvExitAssistDetail"),completed=currentShoeRounds().length;
  let tone="neutral",title="尚未達離場條件",detail="";
- if(state.exitRiskWarned&&cfg.warnGame){tone="danger";title="⚠ 建議離房";detail=`第 ${state.exitRiskTriggerGame} 局已觸發：第 ${cfg.warnGame} 局（含）後 D9 實際下注連錯 ${cfg.warnLoss} 注。此為低回撤風控警訊，不代表下一局一定會輸。`}
+ if(state.exitRiskWarned&&cfg.warnGame){tone="danger";title="⚠ 建議離房";detail=`第 ${state.exitRiskTriggerGame} 局已觸發：第 ${cfg.warnGame} 局（含）後，若實際下注連錯 ${cfg.warnLoss} 次。此為低回撤風控警訊，不代表下一局一定會輸。`}
  else if(completed>=cfg.baseExit){tone="danger";title="⚠ 已到正式離場區間";detail=cfg.kind==="balanced"?"已到第35局附近：停止隨意開新完整循環；僅第5～6關深階段依原規則完成當輪，其餘建議離房。":"已到第45局：停止開新完整循環；若目前第3關以上依原規則完成當輪，第1～2關建議離房。"}
- else if(cfg.warnGame){tone=state.exitRiskLossRun>0?"watch":"neutral";title=state.exitRiskLossRun>0?`風控觀察：D9 目前連錯 ${state.exitRiskLossRun}/${cfg.warnLoss}`:"尚未達離場警訊";detail=`第 ${cfg.warnGame} 局（含）後，若 D9 實際下注連錯 ${cfg.warnLoss} 注，將提示建議離房。沒有D9訊號不清零；和局不結算；實際下注贏才歸零。`}
+ else if(cfg.warnGame){tone=state.exitRiskLossRun>0?"watch":"neutral";title=state.exitRiskLossRun>0?`風控觀察：實際下注連錯 ${state.exitRiskLossRun}/${cfg.warnLoss}`:"尚未達離場警訊";detail=`第 ${cfg.warnGame} 局（含）後，若實際下注連錯 ${cfg.warnLoss} 次，將提示建議離房。沒有實際下注的牌局不清零；和局不結算；若警示後仍繼續，下一次實際下注判斷正確即解除警示並重新累計。`}
  else {detail="此打法沒有通過驗證的額外連錯早退警訊；維持第45局正式離場規則。"}
  if(exitBox)exitBox.className=`hv-assist-box ${tone}`;if(exitTitle)exitTitle.textContent=title;if(exitDetail)exitDetail.textContent=detail;
 }
