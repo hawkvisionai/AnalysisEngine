@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.62";
+const VERSION="3.4.63";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -17,7 +17,8 @@ const state={
  officialHistory:[],progressionIndex:0,skipSettlement:false,deviceToken:"",
  setupComplete:false,lastHoursGeneration:0,lastPasswordGeneration:0,passwordClaim:false,
  actualMode:"basic",modeNotice:"",unitPoints:0,reverseHundredUsed:false,bankrollLocked:false,bankrollResumeAnalysis:false,bankrollResumeBetting:false,corePause:{active:true,waiting:false,waitLeft:0,pauseStartRound:null,shoeStoppedHands:0,stopDisabled:false},lastRoundEvaluationAllowed:false,lastRoundHadSignal:false,
- exitRiskMethod:"",exitRiskLossRun:0,exitRiskWarned:false,exitRiskTriggerGame:null
+ exitRiskMethod:"",exitRiskLossRun:0,exitRiskWarned:false,exitRiskTriggerGame:null,
+ roomDecisionLocked:false,roomDecision:"",roomDecisionGame:null,midRoomObserve:false,midRoomBgCorrect:false
 };
 let tickTimer=null,pollTimer=null,saveTimer=null,lastRenderedSecond=null;
 let hvViewEpoch=0,hvCurrentView="boot";
@@ -66,6 +67,15 @@ function countBP(a){return {b:a.filter(x=>x==="莊").length,p:a.filter(x=>x==="�
 function hasMidDragon(a){let run=1;for(let i=1;i<=a.length;i++){if(i<a.length&&a[i]===a[i-1])run++;else{if(run>=3&&run<=4)return true;run=1}}return false}
 function hasLongDragon(a){let run=1;for(let i=1;i<a.length;i++){if(a[i]===a[i-1]){run++;if(run>=5)return true}else run=1}return false}
 function strictDoubleJump(a){const x=lastN(a,8).map(v=>v==="莊"?"B":"P").join("");return x==="BBPPBBPP"||x==="PPBBPPBB"}
+function transRate(a){if(a.length<2)return 0;let n=0;for(let i=1;i<a.length;i++)if(a[i]!==a[i-1])n++;return n/(a.length-1)}
+function runLens(a){if(!a.length)return[];let out=[],n=1;for(let i=1;i<a.length;i++){if(a[i]===a[i-1])n++;else{out.push(n);n=1}}out.push(n);return out}
+function frequentStructureShift(bp){const a=lastN(bp,12),lens=runLens(a),cats=lens.map(x=>x===1?1:x===2?2:3);let changes=0;for(let i=1;i<cats.length;i++)if(cats[i]!==cats[i-1])changes++;return a.length>=10&&changes>=3}
+function highSwitching(bp){const a=lastN(bp,8);return a.length===8&&transRate(a)>=0.70}
+function priorImbalance(bp,skip=2){const a=bp.slice(0,Math.max(0,bp.length-skip)),t=lastN(a,10);if(t.length<10)return false;const c=countBP(t);return Math.max(c.b,c.p)>=7}
+function isBalancedStandard(){return state.method==="d9_balanced_standard_press10"}
+function resetBalancedRoomAssist(){state.roomDecisionLocked=false;state.roomDecision="";state.roomDecisionGame=null;state.midRoomObserve=false;state.midRoomBgCorrect=false}
+function midRoomRecovered(){const bp=bpOnly(currentShoeRounds());return !highSwitching(bp)&&!frequentStructureShift(bp)}
+function maybeEnterMidRoomObserve(){if(!isBalancedStandard()||!state.bettingActive||state.midRoomObserve)return false;const bp=bpOnly(currentShoeRounds());if(Number(state.exitRiskLossRun||0)>=2&&highSwitching(bp)&&frequentStructureShift(bp)){state.midRoomObserve=true;state.midRoomBgCorrect=false;return true}return false}
 function roomAssistDecision(){
  const cfg=formalAssistInfo();if(!cfg)return null;
  const rounds=currentShoeRounds(),nextGame=rounds.length+1,bp=bpOnly(rounds),ten=lastN(bp,10),c=countBP(ten);
@@ -73,6 +83,17 @@ function roomAssistDecision(){
  if(nextGame<cfg.roomStart){base.title="尚未進入建議看房區間";base.detail=`目前已完成第 ${rounds.length} 局；從第 ${cfg.roomStart} 局起開始判斷。`;return base}
  if(nextGame>cfg.roomEnd){base.title="已超過建議進房區間";base.detail=`目前下一局為第 ${nextGame} 局；此打法建議在第 ${cfg.roomStart}～${cfg.roomEnd} 局完成進房判斷。`;return base}
  if(ten.length<10){base.title="有效莊閒不足 10 局";base.detail=`目前有效莊／閒 ${ten.length}/10；和局不計入。`;return base}
+ if(isBalancedStandard()){
+   if(state.roomDecisionLocked){
+     if(state.roomDecision==="換房"){base.tone="danger";base.title="建議換房";base.detail="目前房況不適合此策略，建議改看其他房間。";return base}
+     if(state.midRoomObserve){base.tone="watch";base.title="中期房況轉弱｜建議觀察";base.detail="D9 仍會持續提供本局判定；目前建議觀察，不下注。";return base}
+     base.tone="good";base.title="房況正常｜正常下注";base.detail="已通過選房條件；進房資格已鎖定，後續由中期房況輔助持續監控。";return base
+   }
+   const eligible=c.b===5&&c.p===5;
+   if(eligible){state.roomDecisionLocked=true;state.roomDecisionGame=nextGame;if(priorImbalance(bp,2)){state.roomDecision="換房";base.tone="danger";base.title="建議換房";base.detail="目前房況不適合此策略，建議改看其他房間。"}else{state.roomDecision="進房";base.ok=true;base.tone="good";base.title="房況符合｜可以進房";base.detail="已通過均衡型・標準選房條件；等待後續 D9 有效訊號。"}return base
+   }
+   base.tone="watch";base.title="繼續觀察";base.detail=`下一局第 ${nextGame} 局｜目前尚未達到適合進房條件。`;return base
+ }
  if(cfg.kind==="stable") {
    const mid=hasMidDragon(bp);base.ok=c.b===5&&c.p===5;base.tone=base.ok?"good":"watch";base.title=base.ok?"符合選房優先條件":"持續觀察";base.detail=`下一局第 ${nextGame} 局｜最近10有效局：莊 ${c.b}／閒 ${c.p}${mid?"｜已有3～4同邊中龍加分":""}`;return base
  }
@@ -222,6 +243,7 @@ function hasBettableDecision(){const p=currentInternalPrediction();return (p==="
 function displayedSuggested(){
  if(state.bankrollLocked)return "點數不足｜請重新設定";
  if(!(state.analysisActive||state.bettingActive))return "—";
+ if(state.midRoomObserve&&isBalancedStandard())return "觀察｜本局不下注";
  if(!hasBettableDecision())return "本局不下注";
  if(state.points<100||state.skippedSetup)return "—";
  const wager=suggestedBetPoints();
@@ -395,6 +417,7 @@ async function enterAnalysisFromSetupButton(){
      state.bettingActive=false;
      state.progressionIndex=0;
      resetFormalExitRisk();
+     resetBalancedRoomAssist();
      state.currentPublicBetAllowed=false;
      state.reverseHundredUsed=false;
      state.officialHistory=[];
@@ -475,7 +498,7 @@ function commitSettings(){const before=state.settingsSnapshot;const oldKey=befor
  const keepPoints=state.points,keepInitialPoints=state.initialPoints,keepProfit=state.profit;state.bankrollLocked=false;
  window.HawkVisionAnalysisCore?.resetShoe?.();
  state.points=keepPoints;state.initialPoints=keepInitialPoints;state.profit=keepProfit;normalizePointState("points");
- state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();
+ state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();resetBalancedRoomAssist();
  state.officialHistory=[];state.skipSettlement=false;state.currentPublicBetAllowed=false;
  state.reverseHundredUsed=false;state.lastRoundEvaluationAllowed=false;state.lastRoundHadSignal=false;
  resetCorePause();resetOfficialStats();resetSkip();setRoadVisible(true);updatePointCards()
@@ -487,7 +510,7 @@ function openHourConfirm(hours,qty,max){qty=Math.max(1,Math.min(max,Number(qty)|
 async function renderHours(){const viewEpoch=beginView("hours");showShell();setErr("");if(isMemberRole())await loadHours().catch(e=>{if(isCurrentView(viewEpoch,"hours"))setErr(e.message||String(e))});if(!isCurrentView(viewEpoch,"hours"))return;$("hvEntryTitle").innerHTML=brandTitle(`<span class="hv-hours-top-right"><span class="hv-used-total">${isMemberRole()?`已使用總時數 <b>${state.usedTotal}</b> 小時`:""}</span><button id="hvHoursEnter" class="hv-top-close" type="button">進入分析</button></span>`);$("hvEntryHint").textContent="";["hvEntryBack","hvEntrySkip","hvEntryNext"].forEach(id=>$(id).style.display="none");const packs=state.hourInventory.filter(p=>Number(p.available_count)>0);const packHtml=isManagementRole()?`<div class="hv-hours-unlimited">不受時數限制</div>`:(packs.length?packs.map(p=>{const h=Number(p.hours_per_package),count=Number(p.available_count),qty=Math.max(1,Math.min(count,state.packQty[h]||1));state.packQty[h]=qty;return `<div class="hv-hour-row-wrap"><div class="hv-hour-card"><div><strong>${h} 小時</strong><small>可使用 ${count} 包</small></div><div class="hv-pack-actions"><div class="hv-inline-stepper" aria-label="開啟數量"><button type="button" data-pack-minus="${h}" ${qty<=1?"disabled":""}>−</button><strong>${qty}</strong><button type="button" data-pack-plus="${h}" ${qty>=count?"disabled":""}>+</button></div><button class="hv-hour-open" data-hour="${h}" data-max="${count}" type="button">開啟</button></div></div></div>`}).join(""):`<div class="hv-hours-none">沒有可用時數，請聯繫上層</div>`);$("hvEntryBody").innerHTML=`<div class="hv-time-panel"><div class="hv-time-caption">目前剩餘時間</div><div id="hvHoursLiveTime" class="hv-time-big">${isManagementRole()?"不受限制":formatTime(calcRemaining())}</div></div><section class="hv-hours-available"><h3>可使用時數包</h3><div class="hv-hour-list">${packHtml}</div></section>`;const enterHoursAnalysis=()=>{if(state.pendingSettingsCommit)commitSettings();if(hasChosenNewStrategy())showAnalysis();else enterDefaultStandard()};const hoursEnter=$("hvHoursEnter");if(hoursEnter)hoursEnter.onclick=enterHoursAnalysis;if(isMemberRole()){$("hvEntryBody").querySelectorAll("[data-pack-minus]").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.packMinus);state.packQty[h]=Math.max(1,(state.packQty[h]||1)-1);renderHours()});$("hvEntryBody").querySelectorAll("[data-pack-plus]").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.packPlus),p=state.hourInventory.find(x=>Number(x.hours_per_package)===h);state.packQty[h]=Math.min(Number(p?.available_count||1),(state.packQty[h]||1)+1);renderHours()});$("hvEntryBody").querySelectorAll(".hv-hour-open").forEach(b=>b.onclick=()=>{const h=Number(b.dataset.hour),max=Number(b.dataset.max);openHourConfirm(h,state.packQty[h]||1,max)})}}
 function updateTimeUI(){if(!state.isMember){$("hvMemberTimeBlock")?.classList.remove("show");if($("hvMenuRemainingTime"))$("hvMenuRemainingTime").style.display="none";applyTimeLock();return}const sec=calcRemaining();state.remaining=sec;if(sec!==lastRenderedSecond){lastRenderedSecond=sec;const t=formatTime(sec);if($("hvHoursLiveTime"))$("hvHoursLiveTime").textContent=t;$("hvMemberTimeBlock")?.classList.add("show");if($("hvRemainingTimeTop"))$("hvRemainingTimeTop").textContent=t;if($("hvMenuRemainingTime")){$("hvMenuRemainingTime").style.display="block";$("hvMenuRemainingTime").textContent=`剩餘時間 ${t}`}}applyTimeLock()}
 function applyTimeLock(){const locked=state.isMember&&hvCurrentView==="analysis"&&calcRemaining()<=0;document.body.classList.toggle("hv-time-locked",locked);const banner=$("hvLockBanner");if(banner){banner.textContent="剩餘時數不足，請聯繫上層";banner.classList.toggle("show",locked)}document.querySelectorAll('#hvFunctionPopover [data-hv-fn]').forEach(b=>{const fn=b.dataset.hvFn;b.disabled=locked&&!['hours','logout'].includes(fn)})}
-function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.mode,actual_mode:state.actualMode,mode_notice:state.modeNotice,bankroll_base:state.initialPoints,current_bankroll:state.points,profit:state.profit,betting:{family:state.family,method:state.method,no_commission:state.noCommission,analysis_active:state.analysisActive,betting_active:state.bettingActive,progression_index:state.progressionIndex,unit_points:state.unitPoints,core_pause:state.corePause,official_history:state.officialHistory,reverse_hundred_used:state.reverseHundredUsed,bankroll_locked:state.bankrollLocked,skipped_setup:state.skippedSetup,exit_risk_method:state.exitRiskMethod,exit_risk_loss_run:state.exitRiskLossRun,exit_risk_warned:state.exitRiskWarned,exit_risk_trigger_game:state.exitRiskTriggerGame},screen:"analysis"}}
+function serializeSettings(){return {setup_completed:state.setupComplete,selected_mode:state.mode,actual_mode:state.actualMode,mode_notice:state.modeNotice,bankroll_base:state.initialPoints,current_bankroll:state.points,profit:state.profit,betting:{family:state.family,method:state.method,no_commission:state.noCommission,analysis_active:state.analysisActive,betting_active:state.bettingActive,progression_index:state.progressionIndex,unit_points:state.unitPoints,core_pause:state.corePause,official_history:state.officialHistory,reverse_hundred_used:state.reverseHundredUsed,bankroll_locked:state.bankrollLocked,skipped_setup:state.skippedSetup,exit_risk_method:state.exitRiskMethod,exit_risk_loss_run:state.exitRiskLossRun,exit_risk_warned:state.exitRiskWarned,exit_risk_trigger_game:state.exitRiskTriggerGame,room_decision_locked:state.roomDecisionLocked,room_decision:state.roomDecision,room_decision_game:state.roomDecisionGame,mid_room_observe:state.midRoomObserve,mid_room_bg_correct:state.midRoomBgCorrect},screen:"analysis"}}
 function queueSave(analysisState){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveRuntime(analysisState).catch(()=>{}),250)}
 window.hvAnalysisRuntimeSave=analysisState=>queueSave(analysisState);
 async function saveRuntime(analysisState){if(!state.user)return;await rpc("hv_analysis_save_runtime_v1",{p_device_token:state.deviceToken,p_settings:serializeSettings(),p_analysis_state:analysisState||window.HawkVisionAnalysisCore?.exportState?.()||{}})}
@@ -534,7 +557,7 @@ function captureRoundSnapshot(roundNumber){
   lastRoundEvaluationAllowed:!!state.lastRoundEvaluationAllowed,
   lastRoundHadSignal:!!state.lastRoundHadSignal,
   currentPublicBetAllowed:!!state.currentPublicBetAllowed,
-  exitRiskMethod:state.exitRiskMethod||"",exitRiskLossRun:Math.max(0,Number(state.exitRiskLossRun||0)),exitRiskWarned:!!state.exitRiskWarned,exitRiskTriggerGame:state.exitRiskTriggerGame,
+  exitRiskMethod:state.exitRiskMethod||"",exitRiskLossRun:Math.max(0,Number(state.exitRiskLossRun||0)),exitRiskWarned:!!state.exitRiskWarned,exitRiskTriggerGame:state.exitRiskTriggerGame,roomDecisionLocked:!!state.roomDecisionLocked,roomDecision:state.roomDecision||"",roomDecisionGame:state.roomDecisionGame,midRoomObserve:!!state.midRoomObserve,midRoomBgCorrect:!!state.midRoomBgCorrect,
   roadOpen:document.body.classList.contains("hv-road-open"),
   coreSnapshot
  }
@@ -565,6 +588,7 @@ function settleRound(result){
  state.lastRoundHadSignal=signal;state.lastRoundEvaluationAllowed=!!(state.analysisActive&&allowedBefore&&!skip);
  if(!signal){state.currentPublicBetAllowed=false;updatePointCards();resetSkip();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();queueSave();return}
  const win=predicted===result;
+ if(state.midRoomObserve&&isBalancedStandard()&&!skip){state.midRoomBgCorrect=win}
  if(state.bettingActive&&allowedBefore&&!skip){
    const wager=suggestedBetPoints();
    if(wager<=state.points){
@@ -606,7 +630,7 @@ function restoreExactRoundSnapshot(snapshot){
  state.lastRoundEvaluationAllowed=!!snapshot.lastRoundEvaluationAllowed;
  state.lastRoundHadSignal=!!snapshot.lastRoundHadSignal;
  state.currentPublicBetAllowed=!!snapshot.currentPublicBetAllowed;
- state.exitRiskMethod=snapshot.exitRiskMethod||"";state.exitRiskLossRun=Math.max(0,Number(snapshot.exitRiskLossRun||0));state.exitRiskWarned=!!snapshot.exitRiskWarned;state.exitRiskTriggerGame=snapshot.exitRiskTriggerGame==null?null:Number(snapshot.exitRiskTriggerGame);
+ state.exitRiskMethod=snapshot.exitRiskMethod||"";state.exitRiskLossRun=Math.max(0,Number(snapshot.exitRiskLossRun||0));state.exitRiskWarned=!!snapshot.exitRiskWarned;state.exitRiskTriggerGame=snapshot.exitRiskTriggerGame==null?null:Number(snapshot.exitRiskTriggerGame);state.roomDecisionLocked=!!snapshot.roomDecisionLocked;state.roomDecision=snapshot.roomDecision||"";state.roomDecisionGame=snapshot.roomDecisionGame==null?null:Number(snapshot.roomDecisionGame);state.midRoomObserve=!!snapshot.midRoomObserve;state.midRoomBgCorrect=!!snapshot.midRoomBgCorrect;
  window.HawkVisionAnalysisCore?.setStrategy?.(state.method);
  window.HawkVisionAnalysisCore?.setLookback?.(requiredGames());
  const restored=window.HawkVisionAnalysisCore?.restoreExactSnapshot?.(snapshot.coreSnapshot)===true;
@@ -636,7 +660,7 @@ function undoLastRoundExact(){
 }
 function setupStartButtons(){setupRoadToggle();$("hvResetProfit")?.addEventListener("click",resetSessionProfit);$("hvStartAnalysis")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive||state.analysisActive)return;state.analysisActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);if($("hvSuggestedBet"))$("hvSuggestedBet").textContent="—";syncStartControls();await window.HawkVisionAnalysisCore?.analyzeNow?.();queueSave()});$("hvStartBetting")?.addEventListener("click",async()=>{if(state.bankrollLocked||state.bettingActive)return;const hadAnalysis=state.analysisActive;state.analysisActive=true;state.bettingActive=true;state.currentPublicBetAllowed=false;setRoadVisible(false);state.progressionIndex=0;resetFormalExitRisk();if(!hadAnalysis)resetCorePause();resetOfficialStats();if(!hadAnalysis)await window.HawkVisionAnalysisCore?.analyzeNow?.();if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested();syncStartControls();queueSave()});document.querySelectorAll("[data-result]").forEach(btn=>btn.addEventListener("click",()=>settleRound(btn.dataset.result),true));$("confirmNewShoe")?.addEventListener("click",()=>setTimeout(()=>{
  setRoadVisible(true);
- state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();
+ state.analysisActive=false;state.bettingActive=false;state.progressionIndex=0;resetFormalExitRisk();resetBalancedRoomAssist();
  state.reverseHundredUsed=false;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.officialHistory=[];state.currentPublicBetAllowed=false;
  resetCorePause();resetSkip();
  updatePointCards();
@@ -649,12 +673,21 @@ async function submitPasswordClaim(){const p1=$("hvNewPassword")?.value||"",p2=$
 window.HawkVisionSessionPolicy={
  isPredictionPublic(){
    const i=info();
+   if(isBalancedStandard()&&state.bettingActive){
+     if(state.midRoomObserve){
+       if(state.midRoomBgCorrect&&midRoomRecovered()){state.midRoomObserve=false;state.midRoomBgCorrect=false;state.exitRiskLossRun=0;renderFormalAssist()}
+       else{state.currentPublicBetAllowed=false;renderFormalAssist();return true}
+     }
+     maybeEnterMidRoomObserve();
+     if(state.midRoomObserve){state.currentPublicBetAllowed=false;renderFormalAssist();return true}
+   }
    const allowed=(i?.pause==="none")?true:coreBetAllowed();
    state.currentPublicBetAllowed=allowed===true;
    if(state.currentPublicBetAllowed){
      const wager=suggestedBetPoints();
      if(wager>state.points){activateBankrollLock();return false}
    }
+   renderFormalAssist();
    return state.currentPublicBetAllowed;
  },
  clearPublicSignal(){state.currentPublicBetAllowed=false;if($("hvSuggestedBet"))$("hvSuggestedBet").textContent=displayedSuggested()},
@@ -667,7 +700,7 @@ window.HawkVisionSessionPolicy={
 };
 async function claimDevice(){return rpc("hv_claim_single_device_v1",{p_device_token:state.deviceToken,p_client_name:"analysis"})}
 async function poll(){try{const d=await rpc("hv_analysis_live_status_v1",{p_device_token:state.deviceToken});if(d?.device_valid===false){await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?session_replaced=1");return}if(Number(d?.password_generation||0)>state.lastPasswordGeneration){sessionStorage.setItem("hv-force-login-message","上層已重置密碼，請聯繫上層");await client.auth.signOut({scope:"local"}).catch(()=>{});location.replace("https://hawkvisionai.com/?password_reset=1");return}if(state.isMember){if(d?.active_until)state.activeUntil=d.active_until;if(Number(d?.hours_generation||0)>state.lastHoursGeneration){state.lastHoursGeneration=Number(d.hours_generation||0);state.activeUntil=null;updateTimeUI();syncStartControls();const banner=$("hvLockBanner");if(banner&&state.setupComplete){banner.textContent="所有時數已被清除，請聯繫上層";banner.classList.add("show")}}}}catch(e){console.warn("analysis live status",e)}}
-function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.skippedSetup=!!b.skipped_setup;state.exitRiskMethod=b.exit_risk_method||"";state.exitRiskLossRun=Math.max(0,Number(b.exit_risk_loss_run||0));state.exitRiskWarned=!!b.exit_risk_warned;state.exitRiskTriggerGame=b.exit_risk_trigger_game==null?null:Number(b.exit_risk_trigger_game)}
+function hydrate(settings={}){state.setupComplete=settings.setup_completed===true;state.mode=settings.selected_mode||null;state.actualMode=settings.actual_mode||state.mode||"basic";state.modeNotice=settings.mode_notice||"";state.initialPoints=Number(settings.bankroll_base||0);const hasCurrent=settings.current_bankroll!==undefined&&settings.current_bankroll!==null;state.points=Number(settings.current_bankroll??state.initialPoints??0);state.profit=Number(settings.profit||0);normalizePointState(hasCurrent?"points":"profit");const b=settings.betting&&typeof settings.betting==="object"?settings.betting:{};state.family=STYLE_INFO[b.family]?b.family:null;state.method=b.method||null;if(state.method&&!state.family)state.family=methodStyleKey(state.method);if(state.method==="standard")state.family=null;state.noCommission=state.mode==="basic"?false:!!b.no_commission;state.analysisActive=!!b.analysis_active;state.bettingActive=!!b.betting_active;state.progressionIndex=Math.max(0,Number(b.progression_index||0));state.unitPoints=Math.max(0,Number(b.unit_points||0));state.corePause=normalizeCorePause(b.core_pause);state.officialHistory=Array.isArray(b.official_history)?b.official_history:[];state.reverseHundredUsed=!!b.reverse_hundred_used;state.bankrollLocked=false;state.bankrollResumeAnalysis=false;state.bankrollResumeBetting=false;state.skippedSetup=!!b.skipped_setup;state.exitRiskMethod=b.exit_risk_method||"";state.exitRiskLossRun=Math.max(0,Number(b.exit_risk_loss_run||0));state.exitRiskWarned=!!b.exit_risk_warned;state.exitRiskTriggerGame=b.exit_risk_trigger_game==null?null:Number(b.exit_risk_trigger_game);state.roomDecisionLocked=!!b.room_decision_locked;state.roomDecision=b.room_decision||"";state.roomDecisionGame=b.room_decision_game==null?null:Number(b.room_decision_game);state.midRoomObserve=!!b.mid_room_observe;state.midRoomBgCorrect=!!b.mid_room_bg_correct}
 function clearExpiredMemberRuntime(){
  state.setupComplete=false;state.mode=null;state.family=null;state.method=null;
  state.points=0;state.initialPoints=0;state.profit=0;state.unitPoints=0;
