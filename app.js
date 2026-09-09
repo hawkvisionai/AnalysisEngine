@@ -35,7 +35,7 @@
   const BASIC_MIN_HISTORY = 10;
   const BASIC_INDEX_CACHE_KEY = "hv-basic-d-index-v2";
   const BASIC_INDEX_TTL_MS = 6*60*60*1000;
-  const D9_METHODS = new Set(["reverse7","reverse8","d9_1137","d9_113715","d9_11371531_wait","d9_1371531_wait","d9_1371531_nostop"]);
+  const D9_METHODS = new Set(["reverse7","reverse8","d9_1137","d9_113715","d9_balanced_standard_press10","d9_11371531_wait","d9_1371531_wait","d9_1371531_nostop"]);
 
   function normalizeWinner(winner) {
     const x=String(winner??"").trim().toLowerCase();

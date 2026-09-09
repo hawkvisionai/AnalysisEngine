@@ -1,6 +1,6 @@
 (() => {
 "use strict";
-const VERSION="3.4.61";
+const VERSION="3.4.62";
 const POLL_MS=1500;
 const ADMIN_API="https://hawkvision-admin-api.michael19941009.workers.dev";
 const client=window.hvAnalysisAuthClient;
@@ -32,6 +32,7 @@ const methodInfo={
  reverse7:{label:"穩健型・入門",style:"穩健型",level:"入門",units:null,recommendedPoints:5000,minGames:9,core:"D9T",reverse:true,rate:.07,pause:"loss4wait1"},
  d9_1137:{label:"穩健型・標準",style:"穩健型",level:"標準",units:60,minGames:9,core:"D9",seq:[1,1,3,7],lastLoss:0,pause:"none"},
  d9_113715:{label:"穩健型・進階",style:"穩健型",level:"進階",units:90,minGames:9,core:"D9",seq:[1,1,3,7,15],lastLoss:1,pause:"none"},
+ d9_balanced_standard_press10:{label:"均衡型・標準",style:"均衡型",level:"標準",units:25,recommendedPoints:2500,minGames:9,core:"D9",seq:[1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10],progression:"win",maxBaseUnit:5000,pause:"none"},
  reverse8:{label:"均衡型・入門",style:"均衡型",level:"入門",units:null,recommendedPoints:7000,minGames:9,core:"D9T",reverse:true,rate:.08,pause:"none"},
  d9_11371531_wait:{label:"均衡型・進階",style:"均衡型",level:"進階",units:190,minGames:9,core:"D9",seq:[1,1,3,7,15,31],lastLoss:0,pause:"none"},
  c10_1371531_recover:{label:"節奏型・標準",style:"節奏型",level:"標準",units:160,minGames:10,core:"C10",seq:[1,3,7,15,31],lastLoss:1,pause:"recover0"},
@@ -41,15 +42,16 @@ const methodInfo={
 };
 const STYLE_INFO={
  stable:{name:"穩健型",icon:"🛡️",brief:"重視點數承受度與穩定性，適合希望降低波動的玩法。",methods:["reverse7","d9_1137","d9_113715"]},
- balanced:{name:"均衡型",icon:"⚖️",brief:"兼顧點數運用與收益能力，在兩者之間取得平衡。",methods:["reverse8","d9_11371531_wait"]},
+ balanced:{name:"均衡型",icon:"⚖️",brief:"兼顧點數運用與收益能力，在兩者之間取得平衡。",methods:["reverse8","d9_balanced_standard_press10","d9_11371531_wait"]},
  tempo:{name:"節奏型",icon:"⌛",brief:"依分析訊號調整出手節奏，在條件適合時進場。",methods:["c10_1371531_recover","d9_1371531_wait"]},
  active:{name:"進取型",icon:"🔥",brief:"提高點數運用與收益潛力，同時承受較高的波動。",methods:["d9_1371531_nostop","b3_11371531_nostop"]}
 };
 
-// v3.4.61｜離場警示顯示文字恢復簡潔版；解除與重新累計邏輯維持。
+// v3.4.62｜僅補入均衡型・標準；沿用穩健型・進階 D9／選房／離房輔助，採 10 倍封頂贏後加注。
 // 僅套用已完成 OOS / 最終逐鞋稽核的三個正式 D9 打法；不改變 D9 方向、配注、結算或原停止邏輯。
 const FORMAL_ASSIST={
  d9_113715:{kind:"stable",label:"🛡️ 穩健型・進階",roomStart:15,roomEnd:20,baseExit:45,warnGame:null,warnLoss:null},
+ d9_balanced_standard_press10:{kind:"stable",label:"⚖️ 均衡型・標準",roomStart:15,roomEnd:20,baseExit:45,warnGame:null,warnLoss:null},
  d9_11371531_wait:{kind:"balanced",label:"⚖️ 均衡型・進階",roomStart:15,roomEnd:35,baseExit:35,warnGame:28,warnLoss:4},
  d9_1371531_nostop:{kind:"aggressive",label:"🔥 進取型・標準",roomStart:10,roomEnd:20,baseExit:45,warnGame:27,warnLoss:3}
 };
@@ -158,9 +160,9 @@ function calcRemaining(){if(!state.isMember||!state.activeUntil)return 0;return 
 function hasRemainingTime(){return isManagementRole()||calcRemaining()>0}
 function info(){return methodInfo[state.method]||null}
 function hasChosenNewStrategy(){return !!methodStyleKey(state.method)}
-function calculatedUnit(){const i=info();if(!i||i.reverse)return 100;return Math.max(100,Math.floor((Math.max(0,state.points)/i.units)/100)*100)}
+function calculatedUnit(){const i=info();if(!i||i.reverse)return 100;const unit=Math.max(100,Math.floor((Math.max(0,state.points)/i.units)/100)*100);return i.maxBaseUnit?Math.min(Number(i.maxBaseUnit),unit):unit}
 function baseUnit(){return Math.max(100,Number(state.unitPoints)||calculatedUnit())}
-function progressionType(){const i=info();return i?.reverse?"reverse":(i?.seq?"loss":"flat")}
+function progressionType(){const i=info();return i?.reverse?"reverse":(i?.seq?(i.progression==="win"?"win":"loss"):"flat")}
 function progressionMultiplier(){const i=info();if(!i||i.reverse||!i.seq)return 1;return i.seq[Math.min(Math.max(0,state.progressionIndex|0),i.seq.length-1)]}
 function suggestedBetPoints(){const i=info();if(i?.reverse){return Math.max(100,Math.ceil((Math.max(0,state.points)*i.rate)/100)*100)}return Math.max(100,baseUnit()*progressionMultiplier())}
 function usesCoreStop(){return ["wait1","recover0","loss4wait1"].includes(info()?.pause)}
@@ -574,6 +576,7 @@ function settleRound(result){
      const t=progressionType(),mi=info();
      if(mi?.reverse){if(wager===100)state.reverseHundredUsed=true;if(mi.pause!=="loss4wait1")state.progressionIndex=0}
      else if(t==="loss"&&mi?.seq){state.progressionIndex=win?0:(state.progressionIndex>=mi.seq.length-1?Math.max(0,Number(mi.lastLoss||0)):state.progressionIndex+1)}
+     else if(t==="win"&&mi?.seq){state.progressionIndex=win?(state.progressionIndex>=mi.seq.length-1?0:state.progressionIndex+1):0}
      else state.progressionIndex=0;
    }
  }
