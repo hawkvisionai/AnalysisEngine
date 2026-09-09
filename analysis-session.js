@@ -80,8 +80,13 @@ function roomAssistDecision(){
  const cfg=formalAssistInfo();if(!cfg)return null;
  const rounds=currentShoeRounds(),nextGame=rounds.length+1,bp=bpOnly(rounds),ten=lastN(bp,10),c=countBP(ten);
  const base={cfg,nextGame,completed:rounds.length,effective:bp.length,ten,c,ok:false,tone:"neutral",title:"持續觀察",detail:""};
- if(nextGame<cfg.roomStart){base.title="尚未進入建議看房區間";base.detail=`目前已完成第 ${rounds.length} 局；從第 ${cfg.roomStart} 局起開始判斷。`;return base}
- if(nextGame>cfg.roomEnd){base.title="已超過建議進房區間";base.detail=`目前下一局為第 ${nextGame} 局；此打法建議在第 ${cfg.roomStart}～${cfg.roomEnd} 局完成進房判斷。`;return base}
+ if(isBalancedStandard()){
+   if(rounds.length<cfg.roomStart){base.title="尚未進入建議看房區間";base.detail=`目前已完成第 ${rounds.length} 局；完成第 ${cfg.roomStart} 局後開始判斷。`;return base}
+   if(rounds.length>cfg.roomEnd&&!state.roomDecisionLocked){base.title="已超過建議進房區間";base.detail=`目前已完成第 ${rounds.length} 局；此打法僅在第 ${cfg.roomStart}～${cfg.roomEnd} 局完成選房判斷。`;return base}
+ }else{
+   if(nextGame<cfg.roomStart){base.title="尚未進入建議看房區間";base.detail=`目前已完成第 ${rounds.length} 局；從第 ${cfg.roomStart} 局起開始判斷。`;return base}
+   if(nextGame>cfg.roomEnd){base.title="已超過建議進房區間";base.detail=`目前下一局為第 ${nextGame} 局；此打法建議在第 ${cfg.roomStart}～${cfg.roomEnd} 局完成進房判斷。`;return base}
+ }
  if(ten.length<10){base.title="有效莊閒不足 10 局";base.detail=`目前有效莊／閒 ${ten.length}/10；和局不計入。`;return base}
  if(isBalancedStandard()){
    if(state.roomDecisionLocked){
@@ -90,7 +95,7 @@ function roomAssistDecision(){
      base.tone="good";base.title="房況正常｜正常下注";base.detail="已通過選房條件；進房資格已鎖定，後續由中期房況輔助持續監控。";return base
    }
    const eligible=c.b===5&&c.p===5;
-   if(eligible){state.roomDecisionLocked=true;state.roomDecisionGame=nextGame;if(priorImbalance(bp,2)){state.roomDecision="換房";base.tone="danger";base.title="建議換房";base.detail="目前房況不適合此策略，建議改看其他房間。"}else{state.roomDecision="進房";base.ok=true;base.tone="good";base.title="房況符合｜可以進房";base.detail="已通過均衡型・標準選房條件；等待後續 D9 有效訊號。"}return base
+   if(eligible){state.roomDecisionLocked=true;state.roomDecisionGame=rounds.length;if(priorImbalance(bp,2)){state.roomDecision="換房";base.tone="danger";base.title="建議換房";base.detail="目前房況不適合此策略，建議改看其他房間。"}else{state.roomDecision="進房";base.ok=true;base.tone="good";base.title="房況符合｜可以進房";base.detail="已通過均衡型・標準選房條件；等待後續 D9 有效訊號。"}return base
    }
    base.tone="watch";base.title="繼續觀察";base.detail=`下一局第 ${nextGame} 局｜目前尚未達到適合進房條件。`;return base
  }
