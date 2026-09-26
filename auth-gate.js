@@ -3,7 +3,7 @@
   const SUPABASE_URL="https://rwxujvpakpemiwkitltk.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY="sb_publishable_aN_1_fzAV3hR6FmW7FTZGg_6SF0MUHF";
   const PRODUCT_KEY="analysis_engine";
-  const ACCESS_CHECK_MS=1500;
+  const ACCESS_CHECK_MS=30000;
 
   const HV_ACTIVE_COOKIE="hv-active-user";
   function hvSetActiveUser(userId){
